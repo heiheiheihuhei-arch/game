@@ -1,13 +1,13 @@
 import { Color, Graphics, Label, Node, Sprite, UITransform } from 'cc';
 import { createGraphics, createLabel, createNode } from '../core/Nodes';
 import { createSprite } from '../core/Res';
-import { BuildingDef, SIDE_COLOR, UnitDef } from './Defs';
+import { BuildingDef, DAMAGE_SMOKE, SIDE_COLOR, UnitDef } from './Defs';
 
 export type Side = 1 | -1;
 
 const HP_BG = new Color(30, 22, 18, 170);
 const HP_FG: Record<number, Color> = { 1: new Color(90, 200, 110), [-1]: new Color(220, 70, 50) };
-const RUBBLE = new Color(110, 100, 90, 255);
+const BURNT = new Color(170, 150, 130, 255);
 const HURT = new Color(255, 240, 230, 255);
 const HURT_TINT = new Color(255, 150, 140, 255);
 const SHAFT = new Color(120, 84, 46, 255);
@@ -228,17 +228,20 @@ export class Unit {
 
 export type BuildingKind = 'tower' | 'gate' | 'barracks' | 'base';
 
-/** 箭塔、兵营、大本营：石台 + 大字；被拆后变成灰色废墟 */
+/** 箭塔、兵营、大本营：完好 → 残破（冒烟、着火由 Battle 放粒子）→ 只剩废墟地基 */
 export class Building {
     readonly node: Node;
     readonly maxHp: number;
     hp: number;
     cdT = 0;
     readonly radius: number;
+    /** 建筑图大概有多高：冒烟、着火从这一带冒出来 */
+    readonly height: number;
     private readonly bar: Graphics;
-    private readonly label: Label | null = null;
-    private readonly base: Graphics;
-    private readonly img: Node | null = null;
+    private readonly whole: Node;
+    private readonly broken: Node | null;
+    private readonly rubble: Node;
+    private readonly shadow: Graphics;
     private flash = 0;
     private shownHp = -1;
     /** 不属于某一路的建筑（大本营、门牙塔）在每条路上对应的位置 */
@@ -248,83 +251,67 @@ export class Building {
     constructor(parent: Node, readonly kind: BuildingKind, readonly def: BuildingDef, readonly side: Side,
         readonly lane: number, readonly s: number, readonly x: number, readonly y: number) {
         this.maxHp = this.hp = def.hp;
-        this.radius = kind === 'base' ? 84 : kind === 'barracks' ? 50 : kind === 'gate' ? 34 : 30;
+        this.radius = kind === 'base' ? 84 : kind === 'barracks' ? 46 : kind === 'gate' ? 30 : 26;
         this.node = createNode(def.name, parent);
         this.node.setPosition(x, y);
-        this.base = createGraphics('Base', this.node);
-        if (def.img) {
-            // 建筑图脚底放在地面上
-            const path = side === 1 ? def.img.me : def.img.foe;
-            this.img = createSprite('Img', this.node, path, { width: def.img.w, height: def.img.h, anchorY: 0 });
-            this.img.setPosition(0, -this.radius * 0.45);
-            this.drawShadow();
-        } else {
-            const size = kind === 'base' ? 92 : kind === 'barracks' ? 56 : kind === 'gate' ? 44 : 38;
-            this.label = createLabel('Glyph', this.node, def.glyph, size, Color.WHITE);
-            this.label.node.setPosition(0, this.radius * 0.55);
-            this.label.enableOutline = true;
-            this.label.outlineColor = new Color(20, 14, 10, 255);
-            this.label.outlineWidth = 3;
-            this.drawBase(SIDE_COLOR[side].fill, SIDE_COLOR[side].rim);
-        }
+        this.shadow = createGraphics('Shadow', this.node);
+        const art = def.img, me = side === 1;
+        const foot = -this.radius * 0.45;
+        // 建筑图脚底放在地面上
+        const put = (name: string, path: string, w?: number, h?: number) => {
+            const n = createSprite(name, this.node, path, { width: w, height: h, anchorY: 0 });
+            n.setPosition(0, foot);
+            return n;
+        };
+        this.rubble = put('Rubble', art.rubble, art.rubbleW);
+        this.rubble.active = false;
+        const broken = me ? art.meBroken : art.foeBroken;
+        this.broken = broken ? put('Broken', broken, art.w, art.h) : null;
+        if (this.broken) this.broken.active = false;
+        this.whole = put('Whole', me ? art.me : art.foe, art.w, art.h);
+        this.height = art.h ?? (art.w ?? 100) * 0.9;
+        this.shadow.fillColor = new Color(20, 14, 10, 70);
+        this.shadow.ellipse(0, foot + 4, this.radius * 1.2, this.radius * 0.42);
+        this.shadow.fill();
         this.bar = createGraphics('Hp', this.node);
     }
 
     get alive() { return this.hp > 0; }
     get attacks() { return !!this.def.attack && this.alive; }
+    get ratio() { return this.hp / this.maxHp; }
 
     hurt(d: number) {
         if (!this.alive) return;
         this.hp -= d;
         this.flash = 0.08;
         if (this.hp <= 0) {
+            // 被拆：只剩一小块地基
             this.hp = 0;
-            if (this.img) {
-                // 被拆：灰掉、塌下去一点
-                this.img.getComponent(Sprite)!.color = RUBBLE;
-                this.img.setScale(0.9, 0.7);
-            } else {
-                this.label!.color = RUBBLE;
-                this.drawBase(RUBBLE, new Color(80, 72, 64, 255));
-            }
+            this.whole.active = false;
+            if (this.broken) this.broken.active = false;
+            this.rubble.active = true;
+            this.shadow.clear();
             this.bar.clear();
         }
     }
 
     sync(dt: number) {
         if (this.flash > 0) this.flash -= dt;
-        const s = this.flash > 0 ? 1.06 : 1;
-        if (this.alive) (this.img ?? this.label!.node).setScale(s, s);
-        if (this.alive && this.hp !== this.shownHp) {
+        if (!this.alive) return;
+        // 血量过半多就换残破图；没有残破图的（帐篷）压暗一些
+        const hurt = this.ratio < DAMAGE_SMOKE;
+        if (this.broken) {
+            this.broken.active = hurt;
+            this.whole.active = !hurt;
+        } else {
+            this.whole.getComponent(Sprite)!.color = hurt ? BURNT : Color.WHITE;
+        }
+        const s = this.flash > 0 ? 1.05 : 1;
+        (this.broken?.active ? this.broken : this.whole).setScale(s, s);
+        if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
-            // 血条画在台基下方：上路的塔靠近屏幕顶端，画在上面会被状态栏挡住
-            drawBar(this.bar, this.side, this.hp / this.maxHp, this.radius * 2, -this.radius * 0.5 - 14);
+            // 血条画在脚下：上路的塔靠近屏幕顶端，画在上面会被状态栏挡住
+            drawBar(this.bar, this.side, this.ratio, Math.max(56, this.radius * 2), -this.radius * 0.45 - 12);
         }
-    }
-
-    private drawShadow() {
-        const g = this.base, r = this.radius;
-        g.clear();
-        g.fillColor = new Color(20, 14, 10, 70);
-        g.ellipse(0, -r * 0.4, r * 1.2, r * 0.42);
-        g.fill();
-    }
-
-    private drawBase(fill: Color, rim: Color) {
-        const g = this.base, r = this.radius;
-        g.clear();
-        g.fillColor = new Color(20, 14, 10, 70);
-        g.ellipse(0, -r * 0.15, r * 1.15, r * 0.42);
-        g.fill();
-        g.fillColor = fill;
-        g.strokeColor = rim;
-        g.lineWidth = 3;
-        for (let i = 0; i < 8; i++) {
-            const a = Math.PI / 8 + i * Math.PI / 4, px = Math.cos(a) * r, py = Math.sin(a) * r * 0.45;
-            if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
-        }
-        g.close();
-        g.fill();
-        g.stroke();
     }
 }

@@ -1,0 +1,59 @@
+<!doctype html>
+<html><body>
+<script>
+// 合成整张地图背景：草地打底，路肩压暗一圈，三条路和两个大本营广场铺土路，边缘羽化
+const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = s; });
+(async () => {
+  const L = await (await fetch('lanes.json')).json();
+  const [grass, dirt] = await Promise.all([load('grass.jpg'), load('dirt.jpg')]);
+  const W = L.W, H = L.H;
+  const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return [c, c.getContext('2d')]; };
+  // 世界坐标（原点在地图中心、y 朝上）→ 画布坐标
+  const X = x => x + W / 2, Y = y => H / 2 - y;
+  const shape = (g, extra) => {
+    g.lineCap = g.lineJoin = 'round';
+    g.lineWidth = L.road + extra;
+    for (const pts of L.lanes) {
+      g.beginPath();
+      pts.forEach(([x, y], i) => i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y)));
+      g.stroke();
+    }
+    for (const s of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(X(s * L.baseX), Y(0), L.plaza[0] + extra / 2, L.plaza[1] + extra / 2, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+  };
+  const [out, o] = mk();
+  o.fillStyle = o.createPattern(grass, 'repeat');
+  o.fillRect(0, 0, W, H);
+  // 路肩：比路宽一圈的暗色，柔和过渡到草地
+  const [edge, e] = mk();
+  e.strokeStyle = e.fillStyle = 'rgba(70, 48, 18, 0.45)';
+  shape(e, 26);
+  o.filter = 'blur(10px)';
+  o.drawImage(edge, 0, 0);
+  o.filter = 'none';
+  // 土路：先画出路形状的遮罩并羽化，再用它裁出土路贴图
+  const [mask, m] = mk();
+  m.strokeStyle = m.fillStyle = '#fff';
+  shape(m, 0);
+  const [road, r] = mk();
+  r.fillStyle = r.createPattern(dirt, 'repeat');
+  r.fillRect(0, 0, W, H);
+  r.globalCompositeOperation = 'destination-in';
+  r.filter = 'blur(4px)';
+  r.drawImage(mask, 0, 0);
+  r.filter = 'none';
+  o.drawImage(road, 0, 0);
+  // 路中间稍微提亮一点，像被踩实的路心
+  const [mid, md] = mk();
+  md.strokeStyle = md.fillStyle = 'rgba(255, 240, 200, 0.18)';
+  shape(md, -L.road * 0.45);
+  o.filter = 'blur(14px)';
+  o.drawImage(mid, 0, 0);
+  o.filter = 'none';
+  window.out = out.toDataURL('image/jpeg', 0.86);
+})();
+</script>
+</body></html>

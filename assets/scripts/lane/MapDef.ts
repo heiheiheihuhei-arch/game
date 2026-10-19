@@ -1,14 +1,14 @@
-import { Color, Graphics, Node } from 'cc';
-import { createGraphics } from '../core/Nodes';
+import { Node } from 'cc';
 import { createSprite } from '../core/Res';
 
 /** 整张地图：比屏幕宽得多、也比屏幕高一点（约 1.3 屏），左右为主、上下也能拖一点 */
 export const WORLD_W = 3500;
 export const WORLD_H = 940;
 export const BASE_X = 1540;
-const ROAD_W = 150;
+/** 路宽、大本营广场大小：游戏里不再用代码画，但 tools/art/mapgen.html 合成地图图时按这两个值画 */
+export const ROAD_W = 150;
 /** 大本营周围的广场，三条路从这里散开 */
-const PLAZA = { rx: 270, ry: 230 };
+export const PLAZA = { rx: 270, ry: 230 };
 
 /**
  * 三条路的控制点，只写我方这半边（从大本营到地图中线），另一半左右镜像，保证双方路况一样。
@@ -81,48 +81,25 @@ export function projectS(lane: number, x: number, y: number): number {
     return bestS;
 }
 
-/**
- * 兵营离自家大本营（沿路）多远；兵营的那座箭塔再往前多远、偏离路中心多少：塔站在路边，
- * 上下路的塔放在靠里的一侧，中路的放在上侧，前后错开，免得两座塔挤在同一处
- */
+/** 兵营离自家大本营（沿路）多远；兵营的那座箭塔就站在路上、兵营前方一点 */
 export const BARRACKS_S = 380;
 export const LANE_TOWER: { ahead: number; lat: number }[] = [
-    { ahead: 230, lat: -108 },
-    { ahead: 380, lat: 108 },
-    { ahead: 230, lat: 108 },
+    { ahead: 150, lat: 0 },
+    { ahead: 150, lat: 0 },
+    { ahead: 150, lat: 0 },
 ];
 /** 两座门牙塔紧贴在大本营正面（相对大本营，我方这边；敌方左右镜像），不放在路口 */
 export const GATE_TOWERS: [number, number][] = [[118, 74], [118, -74]];
 
 export function drawMap(parent: Node) {
-    createSprite('Ground', parent, 'scene/ground_tile', { tiled: true, width: WORLD_W + 400, height: WORLD_H + 400 });
-    const g = createGraphics('Roads', parent);
-    g.lineJoin = Graphics.LineJoin.ROUND;
-    g.lineCap = Graphics.LineCap.ROUND;
-    // 一层层叠：外圈深色路肩 → 路面 → 路心浅色；广场和路一起画，接缝处自然连上
-    const layer = (w: number, c: Color) => {
-        g.strokeColor = c;
-        g.fillColor = c;
-        for (const side of [-1, 1]) {
-            g.ellipse(side * BASE_X, 0, PLAZA.rx + (w - ROAD_W) / 2, PLAZA.ry + (w - ROAD_W) / 2);
-            g.fill();
-        }
-        g.lineWidth = w;
-        for (const pts of LANES) {
-            pts.forEach(([x, y], i) => i === 0 ? g.moveTo(x, y) : g.lineTo(x, y));
-            g.stroke();
-        }
-    };
-    layer(ROAD_W + 18, new Color(120, 86, 52, 150));
-    layer(ROAD_W, new Color(176, 134, 86, 255));
-    layer(ROAD_W - 56, new Color(198, 160, 110, 255));
-    // 路与路之间的空地放树石草垛，地图上下边放营帐旗帜；左右大致对称
+    // 草地和土路是离线合成好的一整张图（tools/art/mapgen.html 按 LANES、ROAD_W、PLAZA 画的），改了路线要重新生成
+    createSprite('Ground', parent, 'q/map', { width: WORLD_W, height: WORLD_H });
+    // 路与路之间的空地放树、石头、花丛，地图上下边也点缀几棵；左右大致对称
     const decor: [string, number, number, number][] = [
-        ['scene/pine_1', -620, 120, 90], ['scene/rock_1', -260, 150, 50], ['scene/hay_pile', 160, 130, 54], ['scene/pine_2', 560, 120, 86],
-        ['scene/rock_2', -560, -190, 50], ['scene/pine_1', -180, -210, 90], ['scene/crates', 240, -190, 54], ['scene/pine_2', 640, -210, 86],
-        ['scene/pine_1', -700, 400, 70], ['scene/rock_1', 100, 410, 44], ['scene/pine_2', 760, 400, 66],
-        ['scene/rock_2', -360, -460, 44], ['scene/pine_1', 380, -460, 66],
-        ['scene/tent', -1540, 300, 100], ['scene/banner', -1460, -360, 100], ['scene/tent', 1540, -360, 100], ['scene/banner', 1460, 290, 100],
+        ['q/tree_a', -640, 110, 80], ['q/rock', -330, 140, 40], ['q/bush', -60, 120, 40], ['q/tree_b', 260, 110, 76], ['q/rock', 560, 140, 38], ['q/tree_a', 820, 110, 78],
+        ['q/tree_b', -700, -210, 76], ['q/bush', -420, -170, 40], ['q/tree_a', -120, -210, 80], ['q/rock', 220, -170, 40], ['q/bush', 480, -170, 38], ['q/tree_b', 740, -210, 76],
+        ['q/tree_a', -900, 390, 64], ['q/bush', -380, 400, 34], ['q/tree_b', 160, 390, 60], ['q/rock', 640, 400, 32], ['q/tree_a', 1100, 390, 62],
+        ['q/tree_b', -1000, -450, 60], ['q/rock', -460, -440, 32], ['q/tree_a', 60, -450, 64], ['q/bush', 560, -440, 34], ['q/tree_b', 980, -450, 60],
     ];
     for (const [path, x, y, h] of decor) createSprite('Decor', parent, path, { height: h, anchorY: 0 }).setPosition(x, y);
 }

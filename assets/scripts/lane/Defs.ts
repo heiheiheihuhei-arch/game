@@ -71,16 +71,42 @@ export interface BuildingDef {
     /** 会射箭的建筑：伤害、间隔、射程；兵营不攻击 */
     attack?: { dmg: number; cd: number; range: number };
     bounty: number;
-    /** 建筑图（我方、敌方）和显示宽或高；没有图的用石台加大字 */
-    img?: { me: string; foe: string; w?: number; h?: number };
+    /** 建筑图：我方、敌方的完好图和残破图（血量低于一半多换残破图，没有就压暗），被拆后的废墟地基图；显示宽或高 */
+    img: BuildingArt;
 }
 
+export interface BuildingArt {
+    me: string;
+    foe: string;
+    meBroken?: string;
+    foeBroken?: string;
+    rubble: string;
+    w?: number;
+    h?: number;
+    rubbleW: number;
+}
+/** 血量低于这个比例换残破图并冒烟，低于 DAMAGE_FIRE 再着火 */
+export const DAMAGE_SMOKE = 0.6;
+export const DAMAGE_FIRE = 0.3;
+
 export const BUILDINGS = {
-    tower: { name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40, img: { me: 'q/tower_blue', foe: 'q/tower_red', h: 110 } } as BuildingDef,
-    barracks: { name: '兵营', glyph: '营', hp: 2200, bounty: 60 } as BuildingDef,
+    tower: {
+        name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40,
+        img: { me: 'q/tower_blue', foe: 'q/tower_red', meBroken: 'q/tower_blue_broken', foeBroken: 'q/tower_red_broken', rubble: 'q/rubble_small', h: 80, rubbleW: 64 },
+    } as BuildingDef,
+    barracks: {
+        name: '兵营', glyph: '营', hp: 2200, bounty: 60,
+        img: { me: 'q/tent_blue', foe: 'q/tent_red', rubble: 'q/rubble_small', h: 96, rubbleW: 90 },
+    } as BuildingDef,
     /** 大本营门前的两座门牙塔：比路上的塔更硬、打得更疼 */
-    gate: { name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60, img: { me: 'q/tower_blue', foe: 'q/tower_red', h: 124 } } as BuildingDef,
-    base: { name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0, img: { me: 'q/castle_blue', foe: 'q/castle_red', w: 250 } } as BuildingDef,
+    gate: {
+        name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60,
+        img: { me: 'q/tower_blue', foe: 'q/tower_red', meBroken: 'q/tower_blue_broken', foeBroken: 'q/tower_red_broken', rubble: 'q/rubble_small', h: 94, rubbleW: 74 },
+    } as BuildingDef,
+    base: {
+        name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0,
+        img: { me: 'q/castle_blue', foe: 'q/castle_red', meBroken: 'q/castle_blue_broken', foeBroken: 'q/castle_red_broken', rubble: 'q/rubble_big', w: 250, rubbleW: 220 },
+    } as BuildingDef,
 };
 
 // ======================= 兵营出兵 =======================
