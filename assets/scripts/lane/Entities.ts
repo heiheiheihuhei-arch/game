@@ -1,20 +1,19 @@
-import { Color, Graphics, Label, Node, Sprite, UITransform } from 'cc';
+import { Color, Graphics, Label, Node } from 'cc';
 import { createGraphics, createLabel, createNode } from '../core/Nodes';
-import { readySprite } from '../core/Res';
-import { ANIM_PERSON, BuildingDef, SIDE_COLOR, UnitDef } from './Defs';
+import { BuildingDef, SIDE_COLOR, UnitDef } from './Defs';
 
 export type Side = 1 | -1;
 
 const HP_BG = new Color(30, 22, 18, 170);
 const HP_FG: Record<number, Color> = { 1: new Color(90, 200, 110), [-1]: new Color(220, 70, 50) };
 const RUBBLE = new Color(110, 100, 90, 255);
-/** 敌方还没有专门的红衣图，先把同一套图染红区分 */
-const FOE_TINT = new Color(255, 165, 150, 255);
-const HURT_TINT = new Color(255, 110, 100, 255);
-/** 走路每帧时长；出手动作每帧时长（蓄力、刺出、收势） */
-const WALK_FRAME = 0.1;
-const ATTACK_FRAMES = [0.12, 0.2, 0.15];
-const ATTACK_TIME = ATTACK_FRAMES.reduce((a, b) => a + b, 0);
+const HURT = new Color(255, 240, 230, 255);
+const SHAFT = new Color(120, 84, 46, 255);
+const STEEL = new Color(225, 230, 238, 255);
+const EDGE = new Color(30, 22, 16, 255);
+/** 枪兵出手：长枪从字里刺出再收回的总时长，前 35% 刺出、其余收回 */
+const THRUST_TIME = 0.32;
+const THRUST_OUT = 0.35;
 
 function drawBar(g: Graphics, side: Side, p: number, w: number, y: number) {
     g.clear();
@@ -26,7 +25,9 @@ function drawBar(g: Graphics, side: Side, p: number, w: number, y: number) {
     g.fill();
 }
 
-/** 路上的一个兵：彩色圆牌 + 兵种字；s 是沿路离我方大本营的距离 */
+const ease = (k: number) => 1 - Math.pow(1 - k, 3);
+
+/** 路上的一个兵：就是一个字（我方蓝、敌方红）；s 是沿路离我方大本营的距离 */
 export class Unit {
     readonly node: Node;
     readonly maxHp: number;
@@ -39,15 +40,15 @@ export class Unit {
     /** 主城卫兵的岗位：不沿路走，守在这附近 */
     post: [number, number] | null = null;
     private readonly body: Node;
+    private readonly glyph: Label;
+    private readonly spear: Graphics | null;
     private readonly bar: Graphics;
     private walkT = Math.random() * 10;
     private lunge = 0;
     private lungeDir = 0;
     private flash = 0;
     private shownHp = -1;
-    private readonly sprite: Sprite | null = null;
-    private shownFrame = '';
-    private atkT = 0;
+    private thrustT = 0;
 
     constructor(parent: Node, readonly def: UnitDef, readonly side: Side, readonly lane: number, public s: number,
         readonly lat: number, readonly dmgMul: number, hpMul: number) {
@@ -55,80 +56,31 @@ export class Unit {
         this.node = createNode(def.name, parent);
         const shadow = createGraphics('Shadow', this.node);
         shadow.fillColor = new Color(20, 14, 10, 60);
-        shadow.ellipse(0, -def.radius * 0.9, def.radius, def.radius * 0.35);
+        shadow.ellipse(0, -def.radius * 0.9, def.radius * 0.9, def.radius * 0.3);
         shadow.fill();
+        // 长枪画在字的后面：刺出去时从字里伸出来
+        this.spear = def.kind === 'qiang' ? createGraphics('Spear', this.node) : null;
         this.body = createNode('Body', this.node);
         const c = SIDE_COLOR[side];
-        if (def.anim) {
-            // 写实兵：脚下一圈阵营色光环，人物站在上面；图是朝右画的，敌方翻过来朝左
-            const ring = createGraphics('Ring', this.node);
-            ring.strokeColor = c.rim;
-            ring.lineWidth = 2;
-            ring.ellipse(0, -def.radius * 0.9, def.radius * 1.05, def.radius * 0.38);
-            ring.stroke();
-            ring.node.setSiblingIndex(1);
-            this.sprite = this.body.addComponent(Sprite);
-            this.sprite.sizeMode = Sprite.SizeMode.CUSTOM;
-            this.body.getComponent(UITransform)!.setAnchorPoint(0.5, 0);
-            this.sprite.color = side === 1 ? Color.WHITE : FOE_TINT;
-            this.bar = createGraphics('Hp', this.node);
-            return;
-        }
-        const g = this.body.addComponent(Graphics);
-        g.fillColor = c.fill;
-        g.strokeColor = c.rim;
-        g.lineWidth = 2;
-        if (def.kind === 'che') g.roundRect(-def.radius, -def.radius, def.radius * 2, def.radius * 2, 5);
-        else g.circle(0, 0, def.radius);
-        g.fill();
-        g.stroke();
-        const l: Label = createLabel('Glyph', this.body, def.glyph, Math.round(def.radius * 1.25), Color.WHITE);
-        l.enableOutline = true;
-        l.outlineColor = new Color(20, 14, 10, 255);
-        l.outlineWidth = 2;
+        this.glyph = createLabel('Glyph', this.body, def.glyph, Math.round(def.radius * 2.1), c.rim);
+        this.glyph.enableOutline = true;
+        this.glyph.outlineColor = c.fill;
+        this.glyph.outlineWidth = 4;
+        this.glyph.enableShadow = true;
+        this.glyph.shadowColor = new Color(20, 14, 10, 150);
         this.bar = createGraphics('Hp', this.node);
     }
 
     get alive() { return this.hp > 0; }
     get radius() { return this.def.radius; }
 
-    private syncFrames(dt: number, walking: boolean) {
-        const anim = this.def.anim!;
-        if (this.atkT > 0) this.atkT -= dt;
-        let path = anim.ready, bob = 0;
-        if (this.atkT > 0) {
-            // 出手：按每帧时长从蓄力播到收势
-            let t = ATTACK_TIME - this.atkT, i = 0;
-            while (i < ATTACK_FRAMES.length - 1 && t > ATTACK_FRAMES[i]) { t -= ATTACK_FRAMES[i]; i++; }
-            path = anim.attack[Math.min(i, anim.attack.length - 1)];
-        } else if (walking) {
-            const step = Math.floor(this.walkT / (10 * WALK_FRAME));
-            path = anim.walk[step % anim.walk.length];
-            // 跟着步子轻轻起伏：两腿交叉经过时最高
-            bob = Math.abs(Math.sin(this.walkT / (10 * WALK_FRAME) / anim.walk.length * Math.PI * 2)) * 1.5;
-        }
-        if (path !== this.shownFrame) {
-            const sf = readySprite(path);
-            if (sf) {
-                this.sprite!.spriteFrame = sf;
-                const k = anim.personPx / ANIM_PERSON;
-                this.body.getComponent(UITransform)!.setContentSize(sf.originalSize.width * k, sf.originalSize.height * k);
-                this.shownFrame = path;
-            }
-        }
-        const face = this.atkT > 0 ? this.lungeDir : this.side;
-        this.body.setScale(face, 1);
-        this.body.setPosition(this.lungeDir * Math.sin(this.lunge * Math.PI) * 4, -this.def.radius * 0.9 + bob);
-        this.sprite!.color = this.flash > 0 ? HURT_TINT : this.side === 1 ? Color.WHITE : FOE_TINT;
-    }
-
     hurt(d: number) { this.hp -= d; this.flash = 0.1; }
 
-    /** 出手：近战往目标方向一冲；有动作帧的播蓄力、刺出 */
+    /** 出手：近战往目标方向一冲；枪兵把长枪刺出去 */
     strike(towardX: number) {
         this.lunge = 1;
         this.lungeDir = Math.sign(towardX - this.x) || this.side;
-        this.atkT = ATTACK_TIME;
+        if (this.spear) this.thrustT = THRUST_TIME;
     }
 
     sync(dt: number, walking: boolean) {
@@ -136,18 +88,53 @@ export class Unit {
         if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 5);
         if (this.flash > 0) this.flash -= dt;
         this.node.setPosition(this.x, this.y);
-        if (this.sprite) {
-            this.syncFrames(dt, walking);
-        } else {
-            const hop = walking ? Math.abs(Math.sin(this.walkT)) * 4 : 0;
-            this.body.setPosition(this.lungeDir * Math.sin(this.lunge * Math.PI) * 10, hop);
-            this.body.setScale(this.flash > 0 ? 1.15 : 1, this.flash > 0 ? 0.88 : 1);
-        }
+        // 走路：一颠一颠、左右轻晃
+        const hop = walking ? Math.abs(Math.sin(this.walkT)) * 5 : 0;
+        const sway = walking ? Math.sin(this.walkT) * 5 : 0;
+        const ext = this.updateSpear(dt);
+        this.body.setPosition(this.lungeDir * Math.sin(this.lunge * Math.PI) * (this.spear ? 4 : 10), hop);
+        // 刺枪时字往前探
+        this.body.angle = sway - this.lungeDir * ext * 10;
+        const sq = this.flash > 0 ? 1.12 : 1;
+        this.body.setScale(sq, 2 - sq);
+        this.glyph.color = this.flash > 0 ? HURT : SIDE_COLOR[this.side].rim;
         if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
-            const top = this.def.anim ? this.def.anim.personPx - this.def.radius * 0.9 + 6 : this.def.radius + 6;
-            if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, top);
+            if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, this.def.radius + 10);
         }
+    }
+
+    /** 画刺出的长枪，返回伸出程度 0～1 */
+    private updateSpear(dt: number): number {
+        const g = this.spear;
+        if (!g) return 0;
+        g.clear();
+        if (this.thrustT <= 0) return 0;
+        this.thrustT -= dt;
+        const p = 1 - Math.max(0, this.thrustT) / THRUST_TIME;
+        const ext = p < THRUST_OUT ? ease(p / THRUST_OUT) : 1 - ease((p - THRUST_OUT) / (1 - THRUST_OUT));
+        const d = this.lungeDir, y = 4;
+        const tail = -d * this.def.radius * 0.6;
+        const tip = d * (this.def.radius * 0.8 + ext * (this.def.range + 18));
+        // 深色描边再画枪杆，土路上也看得清
+        for (const [w, c] of [[8, EDGE], [4, SHAFT]] as [number, Color][]) {
+            g.strokeColor = c;
+            g.lineWidth = w;
+            g.moveTo(tail, y);
+            g.lineTo(tip, y);
+            g.stroke();
+        }
+        g.fillColor = STEEL;
+        g.strokeColor = EDGE;
+        g.lineWidth = 2;
+        g.moveTo(tip + d * 20, y);
+        g.lineTo(tip, y + 7);
+        g.lineTo(tip + d * 3, y);
+        g.lineTo(tip, y - 7);
+        g.close();
+        g.fill();
+        g.stroke();
+        return ext;
     }
 }
 
