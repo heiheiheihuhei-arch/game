@@ -297,6 +297,11 @@ export class Battle {
             this.fx.emit((u.x + t.x) / 2, (u.y + t.y) / 2 + 6, 4, { color: C.spark, speed: 120, size: 2.5, life: 0.25 });
             return;
         }
+        if (u.def.kind === 'gong') {
+            // 弓兵先搭箭拉弦，拉满才真正放箭；目标在这期间死了就不放
+            u.drawBow(t.x, () => { if (t.alive && u.alive) this.shoot(u.side, u.x + Math.sign(t.x - u.x) * u.radius, u.y + 10, t, dmg, false); });
+            return;
+        }
         this.shoot(u.side, u.x, u.y + 10, t, dmg, u.def.shot === 'stone');
     }
 

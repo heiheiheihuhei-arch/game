@@ -14,6 +14,11 @@ const EDGE = new Color(30, 22, 16, 255);
 /** 枪兵出手：长枪从字里刺出再收回的总时长，前 35% 刺出、其余收回 */
 const THRUST_TIME = 0.32;
 const THRUST_OUT = 0.35;
+/** 弓兵出手：搭箭拉满弦的时长，拉满才放箭；放箭后弓弦抖动的时长 */
+const DRAW_TIME = 0.42;
+const TWANG_TIME = 0.18;
+const BOW = new Color(110, 70, 36, 255);
+const STRING = new Color(240, 235, 220, 255);
 
 function drawBar(g: Graphics, side: Side, p: number, w: number, y: number) {
     g.clear();
@@ -49,6 +54,11 @@ export class Unit {
     private flash = 0;
     private shownHp = -1;
     private thrustT = 0;
+    private readonly bow: Graphics | null;
+    private drawT = -1;
+    private twangT = 0;
+    private bowDir: number;
+    private onRelease: (() => void) | null = null;
 
     constructor(parent: Node, readonly def: UnitDef, readonly side: Side, readonly lane: number, public s: number,
         readonly lat: number, readonly dmgMul: number, hpMul: number) {
@@ -60,6 +70,7 @@ export class Unit {
         shadow.fill();
         // 长枪画在字的后面：刺出去时从字里伸出来
         this.spear = def.kind === 'qiang' ? createGraphics('Spear', this.node) : null;
+        this.bowDir = side;
         this.body = createNode('Body', this.node);
         const c = SIDE_COLOR[side];
         this.glyph = createLabel('Glyph', this.body, def.glyph, Math.round(def.radius * 2.1), c.rim);
@@ -68,6 +79,8 @@ export class Unit {
         this.glyph.outlineWidth = 4;
         this.glyph.enableShadow = true;
         this.glyph.shadowColor = new Color(20, 14, 10, 150);
+        // 弓拿在字的前面
+        this.bow = def.kind === 'gong' ? createGraphics('Bow', this.body) : null;
         this.bar = createGraphics('Hp', this.node);
     }
 
@@ -75,6 +88,13 @@ export class Unit {
     get radius() { return this.def.radius; }
 
     hurt(d: number) { this.hp -= d; this.flash = 0.1; }
+
+    /** 弓兵出手：搭箭、拉满弦，拉满那一刻调用 release 放箭 */
+    drawBow(towardX: number, release: () => void) {
+        this.bowDir = Math.sign(towardX - this.x) || this.side;
+        this.drawT = 0;
+        this.onRelease = release;
+    }
 
     /** 出手：近战往目标方向一冲；枪兵把长枪刺出去 */
     strike(towardX: number) {
@@ -92,6 +112,7 @@ export class Unit {
         const hop = walking ? Math.abs(Math.sin(this.walkT)) * 5 : 0;
         const sway = walking ? Math.sin(this.walkT) * 5 : 0;
         const ext = this.updateSpear(dt);
+        this.updateBow(dt);
         this.body.setPosition(this.lungeDir * Math.sin(this.lunge * Math.PI) * (this.spear ? 4 : 10), hop);
         // 刺枪时字往前探
         this.body.angle = sway - this.lungeDir * ext * 10;
@@ -101,6 +122,75 @@ export class Unit {
         if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
             if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, this.def.radius + 10);
+        }
+    }
+
+    /** 画弓：平时松弦；出手时搭箭往后拉满，放箭后弦弹回抖几下 */
+    private updateBow(dt: number) {
+        const g = this.bow;
+        if (!g || !this.alive) return;
+        let pull = 0, arrow = false;
+        if (this.drawT >= 0) {
+            this.drawT += dt;
+            pull = Math.min(1, this.drawT / DRAW_TIME);
+            arrow = true;
+            if (this.drawT >= DRAW_TIME) {
+                this.drawT = -1;
+                this.twangT = TWANG_TIME;
+                const fire = this.onRelease;
+                this.onRelease = null;
+                fire?.();
+            }
+        } else if (this.twangT > 0) {
+            this.twangT -= dt;
+            // 松手后弦往前多弹一点再来回抖
+            pull = -Math.sin((1 - this.twangT / TWANG_TIME) * Math.PI * 3) * 0.25 * (this.twangT / TWANG_TIME);
+        }
+        const d = this.bowDir, r = this.def.radius;
+        const bx = d * r * 0.95, h = r * 1.15, w = r * 0.45, y = 2;
+        g.clear();
+        // 弓身：一道弯弧，两头往后收
+        const pts: [number, number][] = [];
+        for (let i = 0; i <= 12; i++) {
+            const a = -Math.PI / 2 + Math.PI * i / 12;
+            pts.push([bx + d * Math.cos(a) * w, y + Math.sin(a) * h]);
+        }
+        g.strokeColor = EDGE;
+        g.lineWidth = 6;
+        pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py));
+        g.stroke();
+        g.strokeColor = BOW;
+        g.lineWidth = 3;
+        pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py));
+        g.stroke();
+        // 弓弦：从弓的上下两头连到拉弦的手
+        const [tx, ty] = pts[0], [bx2, by2] = pts[12];
+        const hx = bx - d * pull * r * 0.9;
+        g.strokeColor = STRING;
+        g.lineWidth = 1.5;
+        g.moveTo(tx, ty);
+        g.lineTo(hx, y);
+        g.lineTo(bx2, by2);
+        g.stroke();
+        if (arrow) {
+            // 搭在弦上的箭：箭尾在拉弦的手，箭头伸出弓外
+            const head = bx + d * w + d * r * 0.5;
+            g.strokeColor = EDGE;
+            g.lineWidth = 4;
+            g.moveTo(hx, y);
+            g.lineTo(head, y);
+            g.stroke();
+            g.strokeColor = SHAFT;
+            g.lineWidth = 2;
+            g.moveTo(hx, y);
+            g.lineTo(head, y);
+            g.stroke();
+            g.fillColor = STEEL;
+            g.moveTo(head + d * 9, y);
+            g.lineTo(head, y + 4);
+            g.lineTo(head, y - 4);
+            g.close();
+            g.fill();
         }
     }
 
