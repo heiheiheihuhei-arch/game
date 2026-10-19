@@ -1,0 +1,11 @@
+{
+  "note": "Q 版测试图的敌方红色版：参考蓝色图，造型不变只换颜色",
+  "jobs": [
+    { "id": "glyph_qiang_red", "count": 1, "size": "1536x1536", "refs": ["art/raw/130-q-style-test/glyph_qiang_blue_2.png"],
+      "prompt": "和参考图完全相同的Q版立体汉字「枪」，形状、胖瘦、质感、光影完全不变，只把颜色从蓝色换成红色为主、浅红高光、深红描边。纯白背景，画面中只有这个字，无水印" },
+    { "id": "castle_red", "count": 1, "size": "1536x1536", "refs": ["art/raw/130-q-style-test/castle_blue_1.png"],
+      "prompt": "和参考图完全相同的Q版中国古代城堡，造型、角度、石墙颜色完全不变，只把屋顶和旗帜从蓝色换成红色。纯白背景，画面中只有这座城堡，无水印" },
+    { "id": "tower_red", "count": 1, "size": "1536x1536", "refs": ["art/raw/130-q-style-test/tower_blue_1.png"],
+      "prompt": "和参考图完全相同的Q版中国古代箭塔，造型、角度、木石颜色完全不变，只把屋顶和小旗从蓝色换成红色。纯白背景，画面中只有这座塔，无水印" }
+  ]
+}

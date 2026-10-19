@@ -1,5 +1,6 @@
-import { Color, Graphics, Label, Node } from 'cc';
+import { Color, Graphics, Label, Node, Sprite, UITransform } from 'cc';
 import { createGraphics, createLabel, createNode } from '../core/Nodes';
+import { createSprite } from '../core/Res';
 import { BuildingDef, SIDE_COLOR, UnitDef } from './Defs';
 
 export type Side = 1 | -1;
@@ -8,10 +9,11 @@ const HP_BG = new Color(30, 22, 18, 170);
 const HP_FG: Record<number, Color> = { 1: new Color(90, 200, 110), [-1]: new Color(220, 70, 50) };
 const RUBBLE = new Color(110, 100, 90, 255);
 const HURT = new Color(255, 240, 230, 255);
+const HURT_TINT = new Color(255, 150, 140, 255);
 const SHAFT = new Color(120, 84, 46, 255);
 const STEEL = new Color(225, 230, 238, 255);
 const EDGE = new Color(30, 22, 16, 255);
-/** 枪兵出手：长枪从字里刺出再收回的总时长，前 35% 刺出、其余收回 */
+/** 枪兵出手：长枪放平刺出再收回的总时长，前 35% 刺出、其余收回 */
 const THRUST_TIME = 0.32;
 const THRUST_OUT = 0.35;
 /** 弓兵出手：搭箭拉满弦的时长，拉满才放箭；放箭后弓弦抖动的时长 */
@@ -45,8 +47,9 @@ export class Unit {
     /** 主城卫兵的岗位：不沿路走，守在这附近 */
     post: [number, number] | null = null;
     private readonly body: Node;
-    private readonly glyph: Label;
-    private readonly spear: Graphics | null;
+    private readonly glyph: Label | null = null;
+    private readonly glyphImg: Sprite | null = null;
+    private readonly spear: Node | null = null;
     private readonly bar: Graphics;
     private walkT = Math.random() * 10;
     private lunge = 0;
@@ -68,17 +71,25 @@ export class Unit {
         shadow.fillColor = new Color(20, 14, 10, 60);
         shadow.ellipse(0, -def.radius * 0.9, def.radius * 0.9, def.radius * 0.3);
         shadow.fill();
-        // 长枪画在字的后面：刺出去时从字里伸出来
-        this.spear = def.kind === 'qiang' ? createGraphics('Spear', this.node) : null;
         this.bowDir = side;
         this.body = createNode('Body', this.node);
         const c = SIDE_COLOR[side];
-        this.glyph = createLabel('Glyph', this.body, def.glyph, Math.round(def.radius * 2.1), c.rim);
-        this.glyph.enableOutline = true;
-        this.glyph.outlineColor = c.fill;
-        this.glyph.outlineWidth = 4;
-        this.glyph.enableShadow = true;
-        this.glyph.shadowColor = new Color(20, 14, 10, 150);
+        if (def.weapon) {
+            // 兵器拿在字的前侧、画在字后面；锚点在握的位置
+            this.spear = createSprite('Weapon', this.body, def.weapon.path, { height: def.weapon.h });
+            this.spear.getComponent(UITransform)!.setAnchorPoint(0.5, 0.3);
+        }
+        if (def.img) {
+            const n = createSprite('Glyph', this.body, side === 1 ? def.img.me : def.img.foe, { height: def.img.h });
+            this.glyphImg = n.getComponent(Sprite);
+        } else {
+            this.glyph = createLabel('Glyph', this.body, def.glyph, Math.round(def.radius * 2.1), c.rim);
+            this.glyph.enableOutline = true;
+            this.glyph.outlineColor = c.fill;
+            this.glyph.outlineWidth = 4;
+            this.glyph.enableShadow = true;
+            this.glyph.shadowColor = new Color(20, 14, 10, 150);
+        }
         // 弓拿在字的前面
         this.bow = def.kind === 'gong' ? createGraphics('Bow', this.body) : null;
         this.bar = createGraphics('Hp', this.node);
@@ -118,7 +129,8 @@ export class Unit {
         this.body.angle = sway - this.lungeDir * ext * 10;
         const sq = this.flash > 0 ? 1.12 : 1;
         this.body.setScale(sq, 2 - sq);
-        this.glyph.color = this.flash > 0 ? HURT : SIDE_COLOR[this.side].rim;
+        if (this.glyph) this.glyph.color = this.flash > 0 ? HURT : SIDE_COLOR[this.side].rim;
+        if (this.glyphImg) this.glyphImg.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
         if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
             if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, this.def.radius + 10);
@@ -194,36 +206,22 @@ export class Unit {
         }
     }
 
-    /** 画刺出的长枪，返回伸出程度 0～1 */
+    /** 长枪：平时斜握在身前，出手时放平往前刺、再收回；返回伸出程度 0～1 */
     private updateSpear(dt: number): number {
-        const g = this.spear;
-        if (!g) return 0;
-        g.clear();
-        if (this.thrustT <= 0) return 0;
-        this.thrustT -= dt;
-        const p = 1 - Math.max(0, this.thrustT) / THRUST_TIME;
-        const ext = p < THRUST_OUT ? ease(p / THRUST_OUT) : 1 - ease((p - THRUST_OUT) / (1 - THRUST_OUT));
-        const d = this.lungeDir, y = 4;
-        const tail = -d * this.def.radius * 0.6;
-        const tip = d * (this.def.radius * 0.8 + ext * (this.def.range + 18));
-        // 深色描边再画枪杆，土路上也看得清
-        for (const [w, c] of [[8, EDGE], [4, SHAFT]] as [number, Color][]) {
-            g.strokeColor = c;
-            g.lineWidth = w;
-            g.moveTo(tail, y);
-            g.lineTo(tip, y);
-            g.stroke();
+        const n = this.spear;
+        if (!n) return 0;
+        let ext = 0;
+        if (this.thrustT > 0) {
+            this.thrustT -= dt;
+            const p = 1 - Math.max(0, this.thrustT) / THRUST_TIME;
+            ext = p < THRUST_OUT ? ease(p / THRUST_OUT) : 1 - ease((p - THRUST_OUT) / (1 - THRUST_OUT));
         }
-        g.fillColor = STEEL;
-        g.strokeColor = EDGE;
-        g.lineWidth = 2;
-        g.moveTo(tip + d * 20, y);
-        g.lineTo(tip, y + 7);
-        g.lineTo(tip + d * 3, y);
-        g.lineTo(tip, y - 7);
-        g.close();
-        g.fill();
-        g.stroke();
+        const d = this.lungeDir || this.side, r = this.def.radius;
+        // 平时枪尖斜指前上方（偏 25°），刺出时转平（90°）
+        const tilt = 25 + (90 - 25) * Math.min(1, ext * 1.6);
+        n.angle = -d * tilt;
+        n.setScale(d, 1);
+        n.setPosition(d * (r * 0.75 + ext * (this.def.range + 10)), -r * 0.3);
         return ext;
     }
 }
@@ -238,8 +236,9 @@ export class Building {
     cdT = 0;
     readonly radius: number;
     private readonly bar: Graphics;
-    private readonly label: Label;
+    private readonly label: Label | null = null;
     private readonly base: Graphics;
+    private readonly img: Node | null = null;
     private flash = 0;
     private shownHp = -1;
     /** 不属于某一路的建筑（大本营、门牙塔）在每条路上对应的位置 */
@@ -253,14 +252,22 @@ export class Building {
         this.node = createNode(def.name, parent);
         this.node.setPosition(x, y);
         this.base = createGraphics('Base', this.node);
-        const size = kind === 'base' ? 92 : kind === 'barracks' ? 56 : kind === 'gate' ? 44 : 38;
-        this.label = createLabel('Glyph', this.node, def.glyph, size, Color.WHITE);
-        this.label.node.setPosition(0, this.radius * 0.55);
-        this.label.enableOutline = true;
-        this.label.outlineColor = new Color(20, 14, 10, 255);
-        this.label.outlineWidth = 3;
+        if (def.img) {
+            // 建筑图脚底放在地面上
+            const path = side === 1 ? def.img.me : def.img.foe;
+            this.img = createSprite('Img', this.node, path, { width: def.img.w, height: def.img.h, anchorY: 0 });
+            this.img.setPosition(0, -this.radius * 0.45);
+            this.drawShadow();
+        } else {
+            const size = kind === 'base' ? 92 : kind === 'barracks' ? 56 : kind === 'gate' ? 44 : 38;
+            this.label = createLabel('Glyph', this.node, def.glyph, size, Color.WHITE);
+            this.label.node.setPosition(0, this.radius * 0.55);
+            this.label.enableOutline = true;
+            this.label.outlineColor = new Color(20, 14, 10, 255);
+            this.label.outlineWidth = 3;
+            this.drawBase(SIDE_COLOR[side].fill, SIDE_COLOR[side].rim);
+        }
         this.bar = createGraphics('Hp', this.node);
-        this.drawBase(SIDE_COLOR[side].fill, SIDE_COLOR[side].rim);
     }
 
     get alive() { return this.hp > 0; }
@@ -272,8 +279,14 @@ export class Building {
         this.flash = 0.08;
         if (this.hp <= 0) {
             this.hp = 0;
-            this.label.color = RUBBLE;
-            this.drawBase(RUBBLE, new Color(80, 72, 64, 255));
+            if (this.img) {
+                // 被拆：灰掉、塌下去一点
+                this.img.getComponent(Sprite)!.color = RUBBLE;
+                this.img.setScale(0.9, 0.7);
+            } else {
+                this.label!.color = RUBBLE;
+                this.drawBase(RUBBLE, new Color(80, 72, 64, 255));
+            }
             this.bar.clear();
         }
     }
@@ -281,12 +294,20 @@ export class Building {
     sync(dt: number) {
         if (this.flash > 0) this.flash -= dt;
         const s = this.flash > 0 ? 1.06 : 1;
-        this.label.node.setScale(s, s);
+        if (this.alive) (this.img ?? this.label!.node).setScale(s, s);
         if (this.alive && this.hp !== this.shownHp) {
             this.shownHp = this.hp;
             // 血条画在台基下方：上路的塔靠近屏幕顶端，画在上面会被状态栏挡住
             drawBar(this.bar, this.side, this.hp / this.maxHp, this.radius * 2, -this.radius * 0.5 - 14);
         }
+    }
+
+    private drawShadow() {
+        const g = this.base, r = this.radius;
+        g.clear();
+        g.fillColor = new Color(20, 14, 10, 70);
+        g.ellipse(0, -r * 0.4, r * 1.2, r * 0.42);
+        g.fill();
     }
 
     private drawBase(fill: Color, rim: Color) {

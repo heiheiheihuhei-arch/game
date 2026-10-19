@@ -19,7 +19,8 @@ export class Bootstrap extends Component {
         const wide = frame.width / frame.height >= DESIGN_WIDTH / DESIGN_HEIGHT;
         view.setDesignResolutionSize(DESIGN_WIDTH, DESIGN_HEIGHT, wide ? ResolutionPolicy.FIXED_HEIGHT : ResolutionPolicy.FIXED_WIDTH);
         AudioMgr.init(this.node);
-        preloadSprites(['scene/ground_tile']);
+        // Q 版的兵和兵器是出兵时才创建的，图先载好，出场第一帧就有图
+        preloadSprites(['scene/ground_tile', 'q/qiang_blue', 'q/qiang_red', 'q/spear']);
         this.newGame();
     }
 

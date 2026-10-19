@@ -28,12 +28,17 @@ export interface UnitDef {
     /** 需要先在科技里解锁 */
     locked?: boolean;
     radius: number;
+    /** Q 版字的图（我方、敌方）和显示高度；没有图的兵种用普通文字 */
+    img?: { me: string; foe: string; h: number };
+    /** 手里的兵器图（竖着画、刃朝上）和显示高度 */
+    weapon?: { path: string; h: number };
 }
 
 export const UNITS: Record<UnitKind, UnitDef> = {
     qiang: {
         kind: 'qiang', glyph: '枪', name: '枪兵', hp: 130, dmg: 11, cd: 1.0, range: 52, speed: 62,
         vs: { qi: 1.8, building: 1 }, bounty: 5, cost: 12, radius: 21,
+        img: { me: 'q/qiang_blue', foe: 'q/qiang_red', h: 50 }, weapon: { path: 'q/spear', h: 100 },
     },
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 75, dmg: 10, cd: 1.15, range: 190, speed: 58,
@@ -66,14 +71,16 @@ export interface BuildingDef {
     /** 会射箭的建筑：伤害、间隔、射程；兵营不攻击 */
     attack?: { dmg: number; cd: number; range: number };
     bounty: number;
+    /** 建筑图（我方、敌方）和显示宽或高；没有图的用石台加大字 */
+    img?: { me: string; foe: string; w?: number; h?: number };
 }
 
 export const BUILDINGS = {
-    tower: { name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40 } as BuildingDef,
+    tower: { name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40, img: { me: 'q/tower_blue', foe: 'q/tower_red', h: 110 } } as BuildingDef,
     barracks: { name: '兵营', glyph: '营', hp: 2200, bounty: 60 } as BuildingDef,
     /** 大本营门前的两座门牙塔：比路上的塔更硬、打得更疼 */
-    gate: { name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60 } as BuildingDef,
-    base: { name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0 } as BuildingDef,
+    gate: { name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60, img: { me: 'q/tower_blue', foe: 'q/tower_red', h: 124 } } as BuildingDef,
+    base: { name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0, img: { me: 'q/castle_blue', foe: 'q/castle_red', w: 250 } } as BuildingDef,
 };
 
 // ======================= 兵营出兵 =======================
