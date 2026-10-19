@@ -17,7 +17,8 @@ import urllib.error
 import urllib.request
 
 ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/images/generations"
-DEFAULT_MODEL = "doubao-seedream-4-0-20260415"
+# 默认用 5.0 Flash（便宜）；要更好的效果在批次 JSON 里写 "model": "doubao-seedream-5-0-pro-260628"
+DEFAULT_MODEL = "doubao-seedream-5-0-flash-260915"
 KEY_FILE = pathlib.Path.home() / ".config" / "wenzi-gecao" / "ark.env"
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
@@ -81,8 +82,10 @@ def main():
                 "response_format": "b64_json",
                 # 默认会加 AI 生成水印，游戏素材要关掉
                 "watermark": False,
-                "sequential_image_generation": "disabled",
             }
+            # 组图开关只有 4.x 认，5.0 Flash 传了会报参数错误
+            if "seedream-4" in body["model"]:
+                body["sequential_image_generation"] = "disabled"
             if job.get("refs"):
                 body["image"] = [image_ref(r) for r in job["refs"]]
             name = f"{job['id']}_{n + 1}"
