@@ -103,6 +103,8 @@ export class Battle {
     squadSize(side: Side, lane: number) { return SQUAD_BASE + this.sides[side].barracksLv[lane]; }
     reinforceCd(side: Side, lane: number) { return Math.max(0, this.sides[side].reinforceReadyAt[lane] - this.time); }
     guardCd(side: Side) { return Math.max(0, this.sides[side].guardReadyAt - this.time); }
+    /** 门牙塔还剩几座：全倒了才能买卫队 */
+    gatesLeft(side: Side) { return this.buildings.filter(b => b.kind === 'gate' && b.side === side && b.alive).length; }
 
     // ---------- 指令（玩家和电脑共用） ----------
 
@@ -138,13 +140,13 @@ export class Battle {
     /** 主城买一队卫兵，排在大本营门前 */
     buyGuard(side: Side): boolean {
         const st = this.sides[side], base = this.base(side);
-        if (st.gold < GUARD.cost || this.guardCd(side) > 0 || !base.alive) return false;
+        if (st.gold < GUARD.cost || this.guardCd(side) > 0 || !base.alive || this.gatesLeft(side) > 0) return false;
         st.gold -= GUARD.cost;
         st.guardReadyAt = this.time + GUARD.cd;
         const def = UNITS.wei, dmgMul = 1 + st.tech.weapon * TECH_STEP, hpMul = 1 + st.tech.armor * TECH_STEP;
         for (let i = 0; i < GUARD.count; i++) {
             const u = new Unit(this.actors, def, side, -1, 0, 0, dmgMul, hpMul);
-            u.post = [base.x + side * 150, (i - (GUARD.count - 1) / 2) * 80];
+            u.post = [base.x + side * 190, (i - (GUARD.count - 1) / 2) * 80];
             [u.x, u.y] = [base.x + side * 60, u.post[1]];
             this.units.push(u);
         }

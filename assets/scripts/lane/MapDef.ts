@@ -88,8 +88,8 @@ export const LANE_TOWER: { ahead: number; lat: number }[] = [
     { ahead: 330, lat: 76 },
     { ahead: 330, lat: 76 },
 ];
-/** 大本营门前两座门牙塔（相对大本营，我方这边；敌方左右镜像） */
-export const GATE_TOWERS: [number, number][] = [[210, 108], [210, -108]];
+/** 两座门牙塔紧贴在大本营正面（相对大本营，我方这边；敌方左右镜像），不放在路口 */
+export const GATE_TOWERS: [number, number][] = [[118, 74], [118, -74]];
 
 export function drawMap(parent: Node) {
     createSprite('Ground', parent, 'scene/ground_tile', { tiled: true, width: WORLD_W + 400, height: WORLD_H + 400 });

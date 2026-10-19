@@ -124,9 +124,10 @@ export class Game {
             actions: [{
                 label: () => {
                     const cd = bt.guardCd(1);
-                    return `购买卫队 ${GUARD.count} 人\n${cd > 0 ? `冷却 ${Math.ceil(cd)} 秒` : `${GUARD.cost} 金`}`;
+                    const note = bt.gatesLeft(1) > 0 ? '门牙塔全倒后可买' : cd > 0 ? `冷却 ${Math.ceil(cd)} 秒` : `${GUARD.cost} 金`;
+                    return `购买卫队 ${GUARD.count} 人\n${note}`;
                 },
-                enabled: () => bt.base(1).alive && st.gold >= GUARD.cost && bt.guardCd(1) <= 0,
+                enabled: () => bt.base(1).alive && bt.gatesLeft(1) === 0 && st.gold >= GUARD.cost && bt.guardCd(1) <= 0,
                 act: () => bt.buyGuard(1),
                 w: 150,
             }, ...TECHS.map(t => ({
