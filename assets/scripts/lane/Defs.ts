@@ -28,12 +28,19 @@ export interface UnitDef {
     /** 需要先在科技里解锁 */
     locked?: boolean;
     radius: number;
+    /**
+     * 写实动作帧（朝右画的）：0 站立、1 2 走路、3 蓄力、4 出手；没有的兵种还用圆牌
+     * figH：人物在游戏里的显示高度
+     */
+    frames?: string[];
+    figH?: number;
 }
 
 export const UNITS: Record<UnitKind, UnitDef> = {
     qiang: {
         kind: 'qiang', glyph: '枪', name: '枪兵', hp: 130, dmg: 11, cd: 1.0, range: 36, speed: 62,
         vs: { qi: 1.8, building: 1 }, bounty: 5, cost: 12, radius: 21,
+        frames: [0, 1, 2, 3, 4].map(i => `units/qiang/f${i}`), figH: 78,
     },
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 75, dmg: 10, cd: 1.15, range: 190, speed: 58,

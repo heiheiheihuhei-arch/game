@@ -1,5 +1,6 @@
-import { Color, Graphics, Label, Node } from 'cc';
+import { Color, Graphics, Label, Node, Sprite, SpriteFrame, UITransform } from 'cc';
 import { createGraphics, createLabel, createNode } from '../core/Nodes';
+import { readySprite } from '../core/Res';
 import { BuildingDef, SIDE_COLOR, UnitDef } from './Defs';
 
 export type Side = 1 | -1;
@@ -7,6 +8,12 @@ export type Side = 1 | -1;
 const HP_BG = new Color(30, 22, 18, 170);
 const HP_FG: Record<number, Color> = { 1: new Color(90, 200, 110), [-1]: new Color(220, 70, 50) };
 const RUBBLE = new Color(110, 100, 90, 255);
+/** 敌方还没有专门的红衣图，先把同一套图染红区分 */
+const FOE_TINT = new Color(255, 165, 150, 255);
+const HURT_TINT = new Color(255, 110, 100, 255);
+/** 走路每帧时长、出手两帧（蓄力、刺出）的时长 */
+const WALK_FRAME = 0.16;
+const ATTACK_TIME = 0.4;
 
 function drawBar(g: Graphics, side: Side, p: number, w: number, y: number) {
     g.clear();
@@ -37,6 +44,10 @@ export class Unit {
     private lungeDir = 0;
     private flash = 0;
     private shownHp = -1;
+    private readonly sprite: Sprite | null = null;
+    private frames: (SpriteFrame | null)[] = [];
+    private frameIdx = -1;
+    private atkT = 0;
 
     constructor(parent: Node, readonly def: UnitDef, readonly side: Side, readonly lane: number, public s: number,
         readonly lat: number, readonly dmgMul: number, hpMul: number) {
@@ -47,8 +58,26 @@ export class Unit {
         shadow.ellipse(0, -def.radius * 0.9, def.radius, def.radius * 0.35);
         shadow.fill();
         this.body = createNode('Body', this.node);
-        const g = this.body.addComponent(Graphics);
         const c = SIDE_COLOR[side];
+        if (def.frames) {
+            // 写实兵：脚下一圈阵营色光环，人物站在上面；图是朝右画的，敌方翻过来朝左
+            const ring = createGraphics('Ring', this.node);
+            ring.strokeColor = c.rim;
+            ring.lineWidth = 2;
+            ring.ellipse(0, -def.radius * 0.9, def.radius * 1.05, def.radius * 0.38);
+            ring.stroke();
+            ring.node.setSiblingIndex(1);
+            this.sprite = this.body.addComponent(Sprite);
+            this.sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+            const ui = this.body.getComponent(UITransform)!;
+            ui.setAnchorPoint(0.5, 0);
+            ui.setContentSize(def.figH! * 219 / 256, def.figH!);
+            this.frames = def.frames.map(readySprite);
+            this.sprite.color = side === 1 ? Color.WHITE : FOE_TINT;
+            this.bar = createGraphics('Hp', this.node);
+            return;
+        }
+        const g = this.body.addComponent(Graphics);
         g.fillColor = c.fill;
         g.strokeColor = c.rim;
         g.lineWidth = 2;
@@ -66,22 +95,46 @@ export class Unit {
     get alive() { return this.hp > 0; }
     get radius() { return this.def.radius; }
 
+    private syncFrames(dt: number, walking: boolean) {
+        if (this.atkT > 0) this.atkT -= dt;
+        // 出手前半段蓄力、后半段刺出；走路两帧交替；站着不动是第 0 帧
+        const idx = this.atkT > 0 ? (this.atkT > ATTACK_TIME / 2 ? 3 : 4)
+            : walking ? 1 + Math.floor(this.walkT / (10 * WALK_FRAME)) % 2 : 0;
+        if (idx !== this.frameIdx) {
+            const sf = this.frames[idx] ?? readySprite(this.def.frames![idx]);
+            if (sf) { this.sprite!.spriteFrame = sf; this.frameIdx = idx; }
+        }
+        const face = this.atkT > 0 ? this.lungeDir : this.side;
+        this.body.setScale(face, 1);
+        this.body.setPosition(this.lungeDir * Math.sin(this.lunge * Math.PI) * 6, -this.def.radius * 0.9);
+        this.sprite!.color = this.flash > 0 ? HURT_TINT : this.side === 1 ? Color.WHITE : FOE_TINT;
+    }
+
     hurt(d: number) { this.hp -= d; this.flash = 0.1; }
 
-    /** 近战出手时往目标方向一冲 */
-    strike(towardX: number) { this.lunge = 1; this.lungeDir = Math.sign(towardX - this.x) || this.side; }
+    /** 出手：近战往目标方向一冲；有动作帧的播蓄力、刺出 */
+    strike(towardX: number) {
+        this.lunge = 1;
+        this.lungeDir = Math.sign(towardX - this.x) || this.side;
+        this.atkT = ATTACK_TIME;
+    }
 
     sync(dt: number, walking: boolean) {
         if (walking) this.walkT += dt * 10;
         if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 5);
         if (this.flash > 0) this.flash -= dt;
-        const hop = walking ? Math.abs(Math.sin(this.walkT)) * 4 : 0;
         this.node.setPosition(this.x, this.y);
-        this.body.setPosition(this.lungeDir * Math.sin(this.lunge * Math.PI) * 10, hop);
-        this.body.setScale(this.flash > 0 ? 1.15 : 1, this.flash > 0 ? 0.88 : 1);
+        if (this.sprite) {
+            this.syncFrames(dt, walking);
+        } else {
+            const hop = walking ? Math.abs(Math.sin(this.walkT)) * 4 : 0;
+            this.body.setPosition(this.lungeDir * Math.sin(this.lunge * Math.PI) * 10, hop);
+            this.body.setScale(this.flash > 0 ? 1.15 : 1, this.flash > 0 ? 0.88 : 1);
+        }
         if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
-            if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, this.def.radius + 6);
+            const top = this.def.frames ? this.def.figH! - this.def.radius * 0.9 + 4 : this.def.radius + 6;
+            if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, top);
         }
     }
 }

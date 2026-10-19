@@ -20,6 +20,11 @@ function loadArtBundle(): Promise<AssetManager.Bundle | null> {
     return artBundle;
 }
 
+/** 已经载好的图片，没载好返回 null：逐帧动画切帧时用，不能等异步 */
+export function readySprite(path: string): SpriteFrame | null {
+    return ready.get(path) ?? null;
+}
+
 /** 预先加载一批图片（比如某个神将的全部特效），之后播放时第一帧就有图 */
 export function preloadSprites(paths: string[]): Promise<void> {
     return Promise.all(paths.map(loadSprite)).then(() => undefined);
