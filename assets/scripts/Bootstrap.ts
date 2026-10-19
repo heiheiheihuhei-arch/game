@@ -1,7 +1,7 @@
 import { _decorator, Component, ResolutionPolicy, view } from 'cc';
 import { AudioMgr } from './core/AudioMgr';
 import { preloadSprites } from './core/Res';
-import { UNITS } from './lane/Defs';
+import { animFrames, UNITS } from './lane/Defs';
 import { Game } from './lane/Game';
 
 const { ccclass } = _decorator;
@@ -21,7 +21,7 @@ export class Bootstrap extends Component {
         view.setDesignResolutionSize(DESIGN_WIDTH, DESIGN_HEIGHT, wide ? ResolutionPolicy.FIXED_HEIGHT : ResolutionPolicy.FIXED_WIDTH);
         AudioMgr.init(this.node);
         // 兵的动作帧要在出兵前载好，切帧时才有图
-        preloadSprites(['scene/ground_tile', ...Object.keys(UNITS).flatMap(k => UNITS[k as keyof typeof UNITS].frames ?? [])]);
+        preloadSprites(['scene/ground_tile', ...Object.keys(UNITS).flatMap(k => { const a = UNITS[k as keyof typeof UNITS].anim; return a ? animFrames(a) : []; })]);
         this.newGame();
     }
 

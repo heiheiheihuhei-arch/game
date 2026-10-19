@@ -28,19 +28,38 @@ export interface UnitDef {
     /** 需要先在科技里解锁 */
     locked?: boolean;
     radius: number;
-    /**
-     * 写实动作帧（朝右画的）：0 站立、1 2 走路、3 蓄力、4 出手；没有的兵种还用圆牌
-     * figH：人物在游戏里的显示高度
-     */
-    frames?: string[];
-    figH?: number;
+    /** 写实动作帧（朝右画的）；没有的兵种还用圆牌 */
+    anim?: UnitAnim;
+}
+
+/**
+ * 动作帧都由 tools/art/slice_sheet.py 切出：画布高 256，人物头顶到脚底 160 像素、脚底贴底边、头在水平正中，
+ * 所以不同设定图的帧能混着播，游戏里锚点固定用底边中点
+ */
+export interface UnitAnim {
+    /** 站着、等出手冷却时的姿势 */
+    ready: string;
+    /** 走路循环 */
+    walk: string[];
+    /** 出手：从蓄力到收势 */
+    attack: string[];
+    /** 人物（头顶到脚底）在游戏里显示多高 */
+    personPx: number;
+}
+export const ANIM_PERSON = 160;
+
+export function animFrames(a: UnitAnim): string[] {
+    return [a.ready, ...a.walk, ...a.attack];
 }
 
 export const UNITS: Record<UnitKind, UnitDef> = {
     qiang: {
-        kind: 'qiang', glyph: '枪', name: '枪兵', hp: 130, dmg: 11, cd: 1.0, range: 36, speed: 62,
+        kind: 'qiang', glyph: '枪', name: '枪兵', hp: 130, dmg: 11, cd: 1.0, range: 52, speed: 62,
         vs: { qi: 1.8, building: 1 }, bounty: 5, cost: 12, radius: 21,
-        frames: [0, 1, 2, 3, 4].map(i => `units/qiang/f${i}`), figH: 78,
+        anim: {
+            ready: 'units/qiang/a0', walk: [0, 1, 2, 3, 4, 5].map(i => `units/qiang/w${i}`),
+            attack: ['units/qiang/a1', 'units/qiang/a2', 'units/qiang/a3'], personPx: 62,
+        },
     },
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 75, dmg: 10, cd: 1.15, range: 190, speed: 58,
