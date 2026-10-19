@@ -207,11 +207,11 @@ export class Battle {
         u.sync(dt, walking);
     }
 
-    /** 近战兵前面有自己人正在打，就排队等着，不穿过去 */
+    /** 近战兵前面有自己的近战兵正在肉搏，就排队等着；远程兵、投石车站在后面放箭砸石，不挡路 */
     private blocked(u: Unit) {
         if (u.def.range > 60) return false;
         for (const a of this.units) {
-            if (a === u || a.side !== u.side || a.lane !== u.lane || !a.alive || !a.target) continue;
+            if (a === u || a.side !== u.side || a.lane !== u.lane || !a.alive || !a.target || a.def.range > 60) continue;
             const fd = (a.s - u.s) * u.side;
             if (fd > 0 && fd < u.radius + a.radius + 4) return true;
         }

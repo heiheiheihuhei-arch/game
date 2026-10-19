@@ -115,8 +115,8 @@ export class Hud {
 
         this.speedBtn = new Button(this.root, '1 倍速', 100, 44, cb.onSpeed, 20);
         this.speedBtn.node.setPosition(R - 64, T - 30);
-        const tech = new Button(this.root, '科技', 100, 44, cb.onTech, 22);
-        tech.node.setPosition(L + 64, T - 30);
+        const tech = new Button(this.root, '主城科技', 120, 44, cb.onTech, 20);
+        tech.node.setPosition(L + 74, T - 30);
 
         // 三路兵营的快捷按钮排在最下面一行，不压住下路
         ['上路', '中路', '下路'].forEach((name, i) => {

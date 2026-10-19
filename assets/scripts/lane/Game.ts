@@ -60,18 +60,20 @@ export class Game {
         this.minimap = new Minimap(ui, this.cam, this.battle);
         this.hud = new Hud(ui, {
             onLane: lane => this.openBarracks(lane, true),
-            onTech: () => this.openTech(),
+            onTech: () => this.openTech(true),
             onSpeed: () => {
                 this.speedIdx = (this.speedIdx + 1) % SPEEDS.length;
                 this.hud.speedBtn.text = `${SPEEDS[this.speedIdx]} 倍速`;
             },
         });
         this.battle.onNotice = text => this.hud.toast(text);
-        this.hud.toast('拖动看地图；点兵营选兵种、升级、加派', 4);
+        this.hud.toast('拖动看地图；点「营」选兵种、加派，点「城」升级科技', 4);
         this.restart = onRestart;
     }
 
     private onTap(x: number, y: number) {
+        const base = this.battle.base(1);
+        if (Math.hypot(base.x - x, base.y - (y - 30)) < base.radius + 30) { this.openTech(false); return; }
         for (let lane = 0; lane < 3; lane++) {
             const b = this.battle.barracks(1, lane);
             if (Math.hypot(b.x - x, b.y - (y - 20)) < b.radius + 24) { this.openBarracks(lane, false); return; }
@@ -110,10 +112,12 @@ export class Game {
         this.hud.openPanel(model);
     }
 
-    private openTech() {
+    /** 科技在主城里：全军通用，三路都生效（对之后出的兵） */
+    private openTech(moveCam: boolean) {
         const bt = this.battle, st = bt.sides[1];
+        if (moveCam) this.cam.focus(bt.base(1).x + 500);
         this.hud.openPanel({
-            title: () => '科技　兵器、甲胄对之后出的兵生效',
+            title: () => '主城科技　三路通用，对之后出的兵生效',
             actions: TECHS.map(t => ({
                 label: () => {
                     const c = bt.techCost(1, t.key), lv = st.tech[t.key];
