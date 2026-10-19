@@ -37,7 +37,7 @@ export class Game {
         this.battle = new Battle(this.actors, overlay, this.fx, texts);
         this.ai = new Ai(this.battle);
         this.cam = new CameraCtl(world);
-        this.cam.focus(-BASE_X + 500, 0);
+        this.cam.focus(-BASE_X + 500);
 
         const ui = createNode('UI', this.root);
         const vs = view.getVisibleSize();
@@ -48,7 +48,7 @@ export class Game {
         input.on(Node.EventType.TOUCH_MOVE, (e: EventTouch) => {
             const d = e.getUIDelta();
             this.moved += Math.abs(d.x) + Math.abs(d.y);
-            if (this.moved > DRAG_SLOP) this.cam.pan(d.x, d.y);
+            if (this.moved > DRAG_SLOP) this.cam.pan(d.x);
         });
         input.on(Node.EventType.TOUCH_END, (e: EventTouch) => {
             if (this.moved > DRAG_SLOP) return;
@@ -81,7 +81,7 @@ export class Game {
 
     private openBarracks(lane: number, moveCam: boolean) {
         const bt = this.battle, b = bt.barracks(1, lane), st = bt.sides[1];
-        if (moveCam) this.cam.focus(b.x + 250, b.y);
+        if (moveCam) this.cam.focus(b.x + 250);
         const model: PanelModel = {
             title: () => !b.alive ? `${LANE_NAMES[lane]}兵营已被摧毁，这条路不再出兵`
                 : `${LANE_NAMES[lane]}兵营 ${st.barracksLv[lane] + 1} 级　每队 ${bt.squadSize(1, lane)} 人　${Math.ceil(bt.spawnT)} 秒后出兵`,

@@ -5,7 +5,7 @@ import {
     TECH_STEP, TECHS, TechKey, UNITS, UnitKind,
 } from './Defs';
 import { Building, Side, Unit } from './Entities';
-import { BASE_X, LANE_LEN, LANE_NAMES, LANES, lanePoint, SPOTS } from './MapDef';
+import { BARRACKS_S, BASE_X, GATE_TOWERS, LANE_LEN, LANE_NAMES, LANE_TOWER, LANES, lanePoint, projectS } from './MapDef';
 import { Particles } from './Particles';
 
 export class SideState {
@@ -58,17 +58,22 @@ export class Battle {
         this.projG = createGraphics('Projectiles', overlay);
         for (const side of [1, -1] as Side[]) {
             const bx = side === 1 ? -BASE_X : BASE_X;
-            this.buildings.push(new Building(actors, 'base', BUILDINGS.base, side, -1, 0, bx, 0));
+            // 大本营和门牙塔不属于哪一路：记下它们在每条路上对应的位置，三路的兵打到家门口都会碰上
+            const shared = (kind: 'base' | 'gate', x: number, y: number) => {
+                const b = new Building(actors, kind, BUILDINGS[kind], side, -1, 0, x, y);
+                b.sOn = LANES.map((_, lane) => projectS(lane, x, y));
+                this.buildings.push(b);
+            };
+            shared('base', bx, 0);
+            for (const [dx, dy] of GATE_TOWERS) shared('gate', bx + side * dx, dy);
             LANES.forEach((_, lane) => {
-                const L = LANE_LEN[lane];
-                const put = (kind: 'tower' | 'barracks', f: number) => {
-                    const s = side === 1 ? f * L : (1 - f) * L;
-                    const [x, y] = lanePoint(lane, s);
+                const bs = side === 1 ? BARRACKS_S : LANE_LEN[lane] - BARRACKS_S;
+                const put = (kind: 'tower' | 'barracks', s: number, lat: number) => {
+                    const [x, y] = lanePoint(lane, s, lat);
                     this.buildings.push(new Building(actors, kind, BUILDINGS[kind], side, lane, s, x, y));
                 };
-                put('barracks', SPOTS.barracks);
-                put('tower', SPOTS.innerTower);
-                put('tower', SPOTS.outerTower);
+                put('barracks', bs, 0);
+                put('tower', bs + side * LANE_TOWER[lane].ahead, LANE_TOWER[lane].lat);
             });
         }
     }
@@ -166,15 +171,12 @@ export class Battle {
         const dmgMul = 1 + st.tech.weapon * TECH_STEP, hpMul = 1 + st.tech.armor * TECH_STEP;
         for (let i = 0; i < n; i++) {
             // 从兵营门口排成一列走出去
-            const s = b.s + side * (b.radius + 8) - side * i * 22;
-            const u = new Unit(this.actors, def, side, lane, s, (Math.random() - 0.5) * 34, dmgMul, hpMul);
+            const s = b.s + side * (b.radius + 8) - side * i * 34;
+            const u = new Unit(this.actors, def, side, lane, s, (Math.random() - 0.5) * 56, dmgMul, hpMul);
             [u.x, u.y] = lanePoint(lane, s, u.lat);
             this.units.push(u);
         }
     }
-
-    /** 敌方大本营在这条路上的位置 */
-    private baseS(side: Side, lane: number) { return side === 1 ? 0 : LANE_LEN[lane]; }
 
     private updateUnit(u: Unit, dt: number) {
         if (!u.alive) return;
@@ -187,8 +189,8 @@ export class Battle {
             if (fd >= -10 && fd - e.radius <= u.def.range && fd < bestFd) { best = e; bestFd = fd; }
         }
         for (const b of this.buildings) {
-            if (b.side !== foe || !b.alive || (b.lane !== u.lane && b.kind !== 'base')) continue;
-            const bs = b.kind === 'base' ? this.baseS(foe, u.lane) : b.s;
+            if (b.side !== foe || !b.alive || (b.lane !== u.lane && b.lane !== -1)) continue;
+            const bs = b.lane === -1 ? b.sOn[u.lane] : b.s;
             const fd = (bs - u.s) * side;
             if (fd >= -b.radius && fd - b.radius <= u.def.range && fd < bestFd) { best = b; bestFd = fd; }
         }
@@ -307,7 +309,7 @@ export class Battle {
         this.sides[by].gold += b.def.bounty;
         this.fx.emit(b.x, b.y + 20, 40, { color: C.fire, speed: 260, size: 7, life: 0.6, drag: 3 });
         this.fx.emit(b.x, b.y + 20, 24, { color: C.smoke, speed: 90, size: 14, life: 1.4, lift: 50, jitter: 20 });
-        const where = b.kind === 'base' ? '' : LANE_NAMES[b.lane];
+        const where = b.lane === -1 ? '' : LANE_NAMES[b.lane];
         this.onNotice(`${b.side === 1 ? '我方' : '敌方'}${where}${b.def.name}被摧毁`, b.side);
         if (b.def.bounty && by === 1) this.floatText(b.x, b.y + 80, `+${b.def.bounty}`, C.gold, 30);
     }

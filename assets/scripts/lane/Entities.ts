@@ -84,7 +84,7 @@ export class Unit {
     }
 }
 
-export type BuildingKind = 'tower' | 'barracks' | 'base';
+export type BuildingKind = 'tower' | 'gate' | 'barracks' | 'base';
 
 /** 箭塔、兵营、大本营：石台 + 大字；被拆后变成灰色废墟 */
 export class Building {
@@ -98,16 +98,18 @@ export class Building {
     private readonly base: Graphics;
     private flash = 0;
     private shownHp = -1;
+    /** 不属于某一路的建筑（大本营、门牙塔）在每条路上对应的位置 */
+    sOn: number[] = [];
 
-    /** s：所在那条路上的位置；大本营在每条路的端点，lane 为 -1 */
+    /** s：所在那条路上的位置；大本营、门牙塔 lane 为 -1，用 sOn */
     constructor(parent: Node, readonly kind: BuildingKind, readonly def: BuildingDef, readonly side: Side,
         readonly lane: number, readonly s: number, readonly x: number, readonly y: number) {
         this.maxHp = this.hp = def.hp;
-        this.radius = kind === 'base' ? 70 : kind === 'barracks' ? 44 : 32;
+        this.radius = kind === 'base' ? 84 : kind === 'barracks' ? 50 : kind === 'gate' ? 34 : 30;
         this.node = createNode(def.name, parent);
         this.node.setPosition(x, y);
         this.base = createGraphics('Base', this.node);
-        const size = kind === 'base' ? 80 : kind === 'barracks' ? 50 : 40;
+        const size = kind === 'base' ? 92 : kind === 'barracks' ? 56 : kind === 'gate' ? 44 : 38;
         this.label = createLabel('Glyph', this.node, def.glyph, size, Color.WHITE);
         this.label.node.setPosition(0, this.radius * 0.55);
         this.label.enableOutline = true;
@@ -138,7 +140,8 @@ export class Building {
         this.label.node.setScale(s, s);
         if (this.alive && this.hp !== this.shownHp) {
             this.shownHp = this.hp;
-            drawBar(this.bar, this.side, this.hp / this.maxHp, this.radius * 2, this.radius * 1.5 + 18);
+            // 血条画在台基下方：上路的塔靠近屏幕顶端，画在上面会被状态栏挡住
+            drawBar(this.bar, this.side, this.hp / this.maxHp, this.radius * 2, -this.radius * 0.5 - 14);
         }
     }
 

@@ -14,7 +14,7 @@ export interface UnitDef {
     dmg: number;
     /** 出手间隔（秒） */
     cd: number;
-    /** 攻击距离：近战约 30，远程 150 以上 */
+    /** 攻击距离（圆牌边到边）：近战约 36，远程 190 以上 */
     range: number;
     speed: number;
     /** 打兵种 / 建筑时的伤害倍率；不写的按 1 */
@@ -32,20 +32,20 @@ export interface UnitDef {
 
 export const UNITS: Record<UnitKind, UnitDef> = {
     qiang: {
-        kind: 'qiang', glyph: '枪', name: '枪兵', hp: 130, dmg: 11, cd: 1.0, range: 32, speed: 62,
-        vs: { qi: 1.8, building: 1 }, bounty: 5, cost: 12, radius: 13,
+        kind: 'qiang', glyph: '枪', name: '枪兵', hp: 130, dmg: 11, cd: 1.0, range: 36, speed: 62,
+        vs: { qi: 1.8, building: 1 }, bounty: 5, cost: 12, radius: 21,
     },
     gong: {
-        kind: 'gong', glyph: '弓', name: '弓兵', hp: 75, dmg: 10, cd: 1.15, range: 165, speed: 58,
-        vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 5, cost: 14, radius: 12,
+        kind: 'gong', glyph: '弓', name: '弓兵', hp: 75, dmg: 10, cd: 1.15, range: 190, speed: 58,
+        vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 5, cost: 14, radius: 20,
     },
     qi: {
-        kind: 'qi', glyph: '骑', name: '骑兵', hp: 170, dmg: 15, cd: 1.1, range: 34, speed: 105,
-        vs: { gong: 1.9, building: 0.9 }, bounty: 8, cost: 22, locked: true, radius: 15,
+        kind: 'qi', glyph: '骑', name: '骑兵', hp: 170, dmg: 15, cd: 1.1, range: 38, speed: 105,
+        vs: { gong: 1.9, building: 0.9 }, bounty: 8, cost: 22, locked: true, radius: 24,
     },
     che: {
-        kind: 'che', glyph: '车', name: '投石车', hp: 160, dmg: 46, cd: 3.2, range: 260, speed: 40,
-        vs: { building: 3, qiang: 0.4, gong: 0.4, qi: 0.4, che: 0.4 }, shot: 'stone', bounty: 12, cost: 40, locked: true, radius: 17,
+        kind: 'che', glyph: '车', name: '投石车', hp: 160, dmg: 46, cd: 3.2, range: 280, speed: 40,
+        vs: { building: 3, qiang: 0.4, gong: 0.4, qi: 0.4, che: 0.4 }, shot: 'stone', bounty: 12, cost: 40, locked: true, radius: 26,
     },
 };
 export const UNIT_ORDER: UnitKind[] = ['qiang', 'gong', 'qi', 'che'];
@@ -64,8 +64,10 @@ export interface BuildingDef {
 }
 
 export const BUILDINGS = {
-    tower: { name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 230 }, bounty: 40 } as BuildingDef,
+    tower: { name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40 } as BuildingDef,
     barracks: { name: '兵营', glyph: '营', hp: 2200, bounty: 60 } as BuildingDef,
+    /** 大本营门前的两座门牙塔：比路上的塔更硬、打得更疼 */
+    gate: { name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60 } as BuildingDef,
     base: { name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0 } as BuildingDef,
 };
 

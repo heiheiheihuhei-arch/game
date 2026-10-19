@@ -118,9 +118,10 @@ export class Hud {
         const tech = new Button(this.root, '科技', 100, 44, cb.onTech, 22);
         tech.node.setPosition(L + 64, T - 30);
 
+        // 三路兵营的快捷按钮排在最下面一行，不压住下路
         ['上路', '中路', '下路'].forEach((name, i) => {
-            const b = new Button(this.root, `${name}兵营`, 120, 52, () => cb.onLane(i), 22);
-            b.node.setPosition(R - 80, B + 200 - i * 64);
+            const b = new Button(this.root, `${name}兵营`, 130, 42, () => cb.onLane(i), 20);
+            b.node.setPosition((i - 1) * 145 + 60, B + 26);
         });
 
         this.notice = createLabel('Notice', this.root, '', 28, GOLD);
@@ -168,7 +169,7 @@ export class Hud {
         const widths = model.actions.map(a => a.w ?? 110);
         const w = widths.reduce((a, b) => a + b + gap, -gap) + 40;
         const n = createNode('Panel', this.root);
-        n.setPosition(0, -vs.height / 2 + 100);
+        n.setPosition(0, -vs.height / 2 + 140);
         n.getComponent(UITransform)!.setContentSize(w, 170);
         swallow(n);
         roundRect(n.addComponent(Graphics), w, 170, PANEL, PANEL_RIM);
