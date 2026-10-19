@@ -1,7 +1,7 @@
 import { Color, Graphics, Label, Node } from 'cc';
 import { createGraphics, createLabel } from '../core/Nodes';
 import {
-    BARRACKS_UPGRADE, BUILDINGS, INCOME, AI, MATCH_TIME, REINFORCE_SIZE, SPAWN_EVERY, SQUAD_BASE, START_GOLD,
+    BARRACKS_UPGRADE, BUILDINGS, GUARD, INCOME, INCOME_GROWTH, AI, MATCH_TIME, REINFORCE_CD, REINFORCE_SIZE, SPAWN_EVERY, SQUAD_BASE, START_GOLD,
     TECH_STEP, TECHS, TechKey, UNITS, UnitKind,
 } from './Defs';
 import { Building, Side, Unit } from './Entities';
@@ -14,6 +14,9 @@ export class SideState {
     laneKind: UnitKind[] = ['qiang', 'gong', 'qiang'];
     barracksLv = [0, 0, 0];
     kills = 0;
+    /** 下次能买卫队 / 各路能加派的时刻 */
+    guardReadyAt = 0;
+    reinforceReadyAt = [0, 0, 0];
 }
 
 interface Proj {
@@ -80,6 +83,8 @@ export class Battle {
 
     // ---------- 查询 ----------
 
+    get income() { return INCOME + Math.floor(this.time / 60) * INCOME_GROWTH; }
+
     base(side: Side) { return this.buildings.find(b => b.kind === 'base' && b.side === side)!; }
     barracks(side: Side, lane: number) { return this.buildings.find(b => b.kind === 'barracks' && b.side === side && b.lane === lane)!; }
     unlocked(side: Side, kind: UnitKind) {
@@ -96,6 +101,8 @@ export class Battle {
     }
     reinforceCost(side: Side, lane: number) { return UNITS[this.sides[side].laneKind[lane]].cost * REINFORCE_SIZE; }
     squadSize(side: Side, lane: number) { return SQUAD_BASE + this.sides[side].barracksLv[lane]; }
+    reinforceCd(side: Side, lane: number) { return Math.max(0, this.sides[side].reinforceReadyAt[lane] - this.time); }
+    guardCd(side: Side) { return Math.max(0, this.sides[side].guardReadyAt - this.time); }
 
     // ---------- 指令（玩家和电脑共用） ----------
 
@@ -121,9 +128,27 @@ export class Battle {
 
     reinforce(side: Side, lane: number): boolean {
         const cost = this.reinforceCost(side, lane), st = this.sides[side], b = this.barracks(side, lane);
-        if (st.gold < cost || !b.alive) return false;
+        if (st.gold < cost || !b.alive || this.reinforceCd(side, lane) > 0) return false;
         st.gold -= cost;
+        st.reinforceReadyAt[lane] = this.time + REINFORCE_CD;
         this.spawnSquad(side, lane, REINFORCE_SIZE);
+        return true;
+    }
+
+    /** 主城买一队卫兵，排在大本营门前 */
+    buyGuard(side: Side): boolean {
+        const st = this.sides[side], base = this.base(side);
+        if (st.gold < GUARD.cost || this.guardCd(side) > 0 || !base.alive) return false;
+        st.gold -= GUARD.cost;
+        st.guardReadyAt = this.time + GUARD.cd;
+        const def = UNITS.wei, dmgMul = 1 + st.tech.weapon * TECH_STEP, hpMul = 1 + st.tech.armor * TECH_STEP;
+        for (let i = 0; i < GUARD.count; i++) {
+            const u = new Unit(this.actors, def, side, -1, 0, 0, dmgMul, hpMul);
+            u.post = [base.x + side * 150, (i - (GUARD.count - 1) / 2) * 80];
+            [u.x, u.y] = [base.x + side * 60, u.post[1]];
+            this.units.push(u);
+        }
+        this.fx.emit(base.x + side * 100, 20, 30, { color: C.gold, speed: 220, size: 5, life: 0.7, drag: 3 });
         return true;
     }
 
@@ -132,8 +157,8 @@ export class Battle {
     update(dt: number) {
         if (this.winner !== null) { this.fx.update(dt); this.updateFloats(dt); return; }
         this.time += dt;
-        this.sides[1].gold += INCOME * dt;
-        this.sides[-1].gold += INCOME * AI.incomeMul * dt;
+        this.sides[1].gold += this.income * dt;
+        this.sides[-1].gold += this.income * AI.incomeMul * dt;
 
         this.spawnT -= dt;
         if (this.spawnT <= 0) {
@@ -180,11 +205,19 @@ export class Battle {
 
     private updateUnit(u: Unit, dt: number) {
         if (!u.alive) return;
+        if (u.post) { this.updateGuard(u, dt); return; }
         const side = u.side, foe = -side as Side;
         // 找正前方、攻击距离内最近的敌人或敌方建筑
         let best: Unit | Building | null = null, bestFd = Infinity;
         for (const e of this.units) {
-            if (e.side !== foe || e.lane !== u.lane || !e.alive) continue;
+            if (e.side !== foe || !e.alive) continue;
+            if (e.post) {
+                // 卫兵不在路上，按实际距离算
+                const d = Math.hypot(e.x - u.x, e.y - u.y) - e.radius - u.radius;
+                if (d <= u.def.range && d < bestFd) { best = e; bestFd = d; }
+                continue;
+            }
+            if (e.lane !== u.lane) continue;
             const fd = (e.s - u.s) * side;
             if (fd >= -10 && fd - e.radius <= u.def.range && fd < bestFd) { best = e; bestFd = fd; }
         }
@@ -204,6 +237,37 @@ export class Battle {
             walking = true;
         }
         [u.x, u.y] = lanePoint(u.lane, u.s, u.lat);
+        u.sync(dt, walking);
+    }
+
+    /** 卫兵：敌人进了大本营附近就迎上去打，没有敌人就回岗位；永远不离开大本营太远 */
+    private updateGuard(u: Unit, dt: number) {
+        const base = this.base(u.side), post = u.post!;
+        let best: Unit | null = null, bd = Infinity;
+        for (const e of this.units) {
+            if (e.side === u.side || !e.alive || Math.hypot(e.x - base.x, e.y - base.y) > GUARD.leash + 80) continue;
+            const d = Math.hypot(e.x - u.x, e.y - u.y);
+            if (d < bd) { bd = d; best = e; }
+        }
+        u.target = best;
+        if (u.cdT > 0) u.cdT -= dt;
+        let tx = post[0], ty = post[1], walking = false;
+        if (best) {
+            if (bd - best.radius - u.radius <= u.def.range) {
+                if (u.cdT <= 0) { u.cdT = u.def.cd; this.attack(u, best); }
+                tx = u.x; ty = u.y;
+            } else { tx = best.x; ty = best.y; }
+        }
+        const dx = tx - u.x, dy = ty - u.y, d = Math.hypot(dx, dy);
+        if (d > 3) {
+            const step = Math.min(d, u.def.speed * dt);
+            let nx = u.x + dx / d * step, ny = u.y + dy / d * step;
+            const fromBase = Math.hypot(nx - base.x, ny - base.y);
+            if (fromBase > GUARD.leash) { nx = base.x + (nx - base.x) / fromBase * GUARD.leash; ny = base.y + (ny - base.y) / fromBase * GUARD.leash; }
+            u.x = nx;
+            u.y = ny;
+            walking = true;
+        }
         u.sync(dt, walking);
     }
 

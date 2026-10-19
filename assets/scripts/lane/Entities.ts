@@ -28,6 +28,8 @@ export class Unit {
     cdT = 0;
     /** 正在打的目标；为空就继续往前走 */
     target: Unit | Building | null = null;
+    /** 主城卫兵的岗位：不沿路走，守在这附近 */
+    post: [number, number] | null = null;
     private readonly body: Node;
     private readonly bar: Graphics;
     private walkT = Math.random() * 10;

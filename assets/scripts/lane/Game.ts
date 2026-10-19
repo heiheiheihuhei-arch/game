@@ -3,7 +3,7 @@ import { createNode } from '../core/Nodes';
 import { Ai } from './Ai';
 import { Battle } from './Battle';
 import { CameraCtl, Minimap } from './Camera';
-import { INCOME, MATCH_TIME, REINFORCE_SIZE, TECHS, UNIT_ORDER, UNITS } from './Defs';
+import { GUARD, MATCH_TIME, REINFORCE_SIZE, TECHS, UNIT_ORDER, UNITS } from './Defs';
 import { BASE_X, drawMap, LANE_NAMES } from './MapDef';
 import { Particles } from './Particles';
 import { Hud, PanelModel } from './Ui';
@@ -102,8 +102,11 @@ export class Game {
                     w: 120,
                 },
                 {
-                    label: () => `加派 ${REINFORCE_SIZE} 人\n${bt.reinforceCost(1, lane)} 金`,
-                    enabled: () => b.alive && st.gold >= bt.reinforceCost(1, lane),
+                    label: () => {
+                        const cd = bt.reinforceCd(1, lane);
+                        return `加派 ${REINFORCE_SIZE} 人\n${cd > 0 ? `冷却 ${Math.ceil(cd)} 秒` : `${bt.reinforceCost(1, lane)} 金`}`;
+                    },
+                    enabled: () => b.alive && st.gold >= bt.reinforceCost(1, lane) && bt.reinforceCd(1, lane) <= 0,
                     act: () => bt.reinforce(1, lane),
                     w: 120,
                 },
@@ -118,7 +121,15 @@ export class Game {
         if (moveCam) this.cam.focus(bt.base(1).x + 500);
         this.hud.openPanel({
             title: () => '主城科技　三路通用，对之后出的兵生效',
-            actions: TECHS.map(t => ({
+            actions: [{
+                label: () => {
+                    const cd = bt.guardCd(1);
+                    return `购买卫队 ${GUARD.count} 人\n${cd > 0 ? `冷却 ${Math.ceil(cd)} 秒` : `${GUARD.cost} 金`}`;
+                },
+                enabled: () => bt.base(1).alive && st.gold >= GUARD.cost && bt.guardCd(1) <= 0,
+                act: () => bt.buyGuard(1),
+                w: 150,
+            }, ...TECHS.map(t => ({
                 label: () => {
                     const c = bt.techCost(1, t.key), lv = st.tech[t.key];
                     const head = t.costs.length > 1 ? `${t.name} ${lv}/${t.costs.length}` : t.name;
@@ -126,8 +137,8 @@ export class Game {
                 },
                 enabled: () => { const c = bt.techCost(1, t.key); return c !== null && st.gold >= c; },
                 act: () => bt.buyTech(1, t.key),
-                w: 140,
-            })),
+                w: 130,
+            }))],
         });
     }
 
@@ -138,7 +149,7 @@ export class Game {
         this.sortActors();
         this.minimap.update(realDt);
         const me = this.battle.base(1), foe = this.battle.base(-1);
-        this.hud.setTop(this.battle.sides[1].gold, INCOME, Math.max(0, MATCH_TIME - this.battle.time), me.hp / me.maxHp, foe.hp / foe.maxHp);
+        this.hud.setTop(this.battle.sides[1].gold, this.battle.income, Math.max(0, MATCH_TIME - this.battle.time), me.hp / me.maxHp, foe.hp / foe.maxHp);
         this.hud.update(realDt);
         if (this.battle.winner !== null && !this.resultShown) {
             this.resultShown = true;

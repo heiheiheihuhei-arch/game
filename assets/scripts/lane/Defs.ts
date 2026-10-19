@@ -3,7 +3,7 @@ import { Color } from 'cc';
 // ======================= 兵种 =======================
 // 三角克制：枪克骑、骑克弓、弓克枪；投石车专拆建筑，打人很弱
 
-export type UnitKind = 'qiang' | 'gong' | 'qi' | 'che';
+export type UnitKind = 'qiang' | 'gong' | 'qi' | 'che' | 'wei';
 
 export interface UnitDef {
     kind: UnitKind;
@@ -47,10 +47,15 @@ export const UNITS: Record<UnitKind, UnitDef> = {
         kind: 'che', glyph: '车', name: '投石车', hp: 160, dmg: 46, cd: 3.2, range: 280, speed: 40,
         vs: { building: 3, qiang: 0.4, gong: 0.4, qi: 0.4, che: 0.4 }, shot: 'stone', bounty: 12, cost: 40, locked: true, radius: 26,
     },
+    /** 主城卫队：只能在主城花大价钱买，守在大本营附近，不出去推线 */
+    wei: {
+        kind: 'wei', glyph: '卫', name: '卫兵', hp: 900, dmg: 40, cd: 0.9, range: 40, speed: 95,
+        vs: {}, bounty: 30, cost: 0, radius: 27,
+    },
 };
 export const UNIT_ORDER: UnitKind[] = ['qiang', 'gong', 'qi', 'che'];
 /** 每个兵种被什么克：电脑看你出什么，就换成克制它的兵 */
-export const COUNTER: Record<UnitKind, UnitKind> = { qiang: 'gong', gong: 'qi', qi: 'qiang', che: 'qi' };
+export const COUNTER: Record<UnitKind, UnitKind> = { qiang: 'gong', gong: 'qi', qi: 'qiang', che: 'qi', wei: 'gong' };
 
 // ======================= 建筑 =======================
 
@@ -79,8 +84,21 @@ export const SPAWN_EVERY = 14;
 export const SQUAD_BASE = 3;
 /** 兵营升级价（升到 2、3、4 级） */
 export const BARRACKS_UPGRADE = [90, 160, 260];
-/** 加派一队：按当前兵种单价 × 人数 */
+/** 加派一队：按当前兵种单价 × 人数；每条路的兵营加派完要等一会儿才能再派 */
 export const REINFORCE_SIZE = 3;
+export const REINFORCE_CD = 20;
+
+// ======================= 主城卫队 =======================
+// 一路被破后的翻盘手段：兵营不能重建，但主城能买一队很能打的卫兵守家
+
+export const GUARD = {
+    count: 3,
+    cost: 320,
+    /** 买完要等多久才能再买（秒） */
+    cd: 75,
+    /** 卫兵离大本营最远走多远，敌人进了这个圈才迎上去：只守大本营和门牙塔，管不到兵营 */
+    leash: 300,
+};
 
 // ======================= 科技 =======================
 
@@ -99,8 +117,9 @@ export const TECH_STEP = 0.15;
 // ======================= 经济 =======================
 
 export const START_GOLD = 150;
-/** 每秒自动进账 */
+/** 每秒自动进账，开局 4，每过一分钟多 0.5：越到后期钱越多、攻势越猛，对局不至于拖满 10 分钟 */
 export const INCOME = 4;
+export const INCOME_GROWTH = 0.5;
 /** 一局最长 10 分钟，到时按大本营血量、剩余建筑、歼敌数判胜负 */
 export const MATCH_TIME = 600;
 

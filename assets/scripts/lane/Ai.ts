@@ -33,6 +33,9 @@ export class Ai {
 
     private spend() {
         const b = this.b, me = this.side, st = b.sides[me];
+        // 敌人打到家门口：先买卫队守家
+        const home = b.base(me);
+        if (b.units.some(u => u.side !== me && Math.hypot(u.x - home.x, u.y - home.y) < 380) && b.buyGuard(me)) return;
         if (b.time >= AI.unlockQiAt && b.buyTech(me, 'unlock_qi')) return;
         if (b.time >= AI.unlockCheAt && b.buyTech(me, 'unlock_che')) return;
         // 被压得最狠的那条路先加派
