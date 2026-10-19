@@ -25,7 +25,8 @@ export class Ai {
             let want: UnitKind = b.sides[me].laneKind[lane];
             if (Math.random() < AI.counterChance) want = COUNTER[theirs];
             if (b.unlocked(me, 'che') && Math.random() < 0.15) want = 'che';
-            if (!b.unlocked(me, want)) want = theirs === 'gong' ? 'qiang' : 'gong';
+            // 克制兵还没解锁：出一样的兵硬碰硬，别出被克的
+            if (!b.unlocked(me, want)) want = b.unlocked(me, theirs) ? theirs : 'qiang';
             b.setLaneKind(me, lane, want);
         }
     }

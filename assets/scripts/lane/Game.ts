@@ -139,7 +139,8 @@ export class Game {
         if (this.battle.winner !== null && !this.resultShown) {
             this.resultShown = true;
             const w = this.battle.winner, t = this.battle.time, mm = Math.floor(t / 60), ss = Math.floor(t % 60);
-            const line = `用时 ${mm} 分 ${ss} 秒　歼敌 ${this.battle.sides[1].kills}`;
+            const timeout = this.battle.base(1).alive && this.battle.base(-1).alive;
+            const line = `${timeout ? '时间到，按战况判定　' : ''}用时 ${mm} 分 ${ss} 秒　歼敌 ${this.battle.sides[1].kills}`;
             if (w === 1) this.hud.showResult('攻破敌营！', line, true, this.restart);
             else if (w === -1) this.hud.showResult('大本营失守', line, false, this.restart);
             else this.hud.showResult('平局', line, false, this.restart);

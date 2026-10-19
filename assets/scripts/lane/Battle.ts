@@ -147,11 +147,18 @@ export class Battle {
         if (!foeBase.alive) this.winner = 1;
         else if (!myBase.alive) this.winner = -1;
         else if (this.time >= MATCH_TIME) {
-            const a = myBase.hp / myBase.maxHp, b = foeBase.hp / foeBase.maxHp;
-            this.winner = Math.abs(a - b) < 0.02 ? 0 : a > b ? 1 : -1;
+            const a = this.score(1), b = this.score(-1);
+            this.winner = a === b ? 0 : a > b ? 1 : -1;
         }
         this.fx.update(dt);
         this.updateFloats(dt);
+    }
+
+    /** 到时间没分出胜负：先比大本营血量，再比剩下几座建筑，最后比歼敌数 */
+    score(side: Side) {
+        const base = this.base(side);
+        const standing = this.buildings.filter(b => b.side === side && b.alive).length;
+        return Math.round(base.hp / base.maxHp * 100) * 10000 + standing * 1000 + this.sides[side].kills;
     }
 
     private spawnSquad(side: Side, lane: number, n: number) {

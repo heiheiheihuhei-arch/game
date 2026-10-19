@@ -64,9 +64,9 @@ export interface BuildingDef {
 }
 
 export const BUILDINGS = {
-    tower: { name: '箭塔', glyph: '塔', hp: 1400, attack: { dmg: 26, cd: 1.0, range: 230 }, bounty: 60 } as BuildingDef,
-    barracks: { name: '兵营', glyph: '营', hp: 1600, bounty: 100 } as BuildingDef,
-    base: { name: '大本营', glyph: '城', hp: 5000, attack: { dmg: 40, cd: 1.2, range: 260 }, bounty: 0 } as BuildingDef,
+    tower: { name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 230 }, bounty: 40 } as BuildingDef,
+    barracks: { name: '兵营', glyph: '营', hp: 2200, bounty: 60 } as BuildingDef,
+    base: { name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0 } as BuildingDef,
 };
 
 // ======================= 兵营出兵 =======================
@@ -99,7 +99,7 @@ export const TECH_STEP = 0.15;
 export const START_GOLD = 150;
 /** 每秒自动进账 */
 export const INCOME = 4;
-/** 10 分钟还没分出胜负：比双方大本营剩余血量 */
+/** 一局最长 10 分钟，到时按大本营血量、剩余建筑、歼敌数判胜负 */
 export const MATCH_TIME = 600;
 
 // ======================= 电脑 =======================
