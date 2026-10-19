@@ -36,26 +36,26 @@ export interface UnitDef {
 
 export const UNITS: Record<UnitKind, UnitDef> = {
     qiang: {
-        kind: 'qiang', glyph: '枪', name: '枪兵', hp: 130, dmg: 11, cd: 1.0, range: 52, speed: 62,
-        vs: { qi: 1.8, building: 1 }, bounty: 5, cost: 12, radius: 21,
-        img: { me: 'q/qiang_blue', foe: 'q/qiang_red', h: 50 }, weapon: { path: 'q/spear', h: 100 },
+        kind: 'qiang', glyph: '枪', name: '枪兵', hp: 195, dmg: 16, cd: 1.0, range: 52, speed: 62,
+        vs: { qi: 1.8, building: 1 }, bounty: 8, cost: 18, radius: 16,
+        img: { me: 'q/qiang_blue', foe: 'q/qiang_red', h: 38 }, weapon: { path: 'q/spear', h: 76 },
     },
     gong: {
-        kind: 'gong', glyph: '弓', name: '弓兵', hp: 75, dmg: 10, cd: 1.15, range: 190, speed: 58,
-        vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 5, cost: 14, radius: 20,
+        kind: 'gong', glyph: '弓', name: '弓兵', hp: 112, dmg: 15, cd: 1.15, range: 190, speed: 58,
+        vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 8, cost: 21, radius: 15,
     },
     qi: {
-        kind: 'qi', glyph: '骑', name: '骑兵', hp: 170, dmg: 15, cd: 1.1, range: 38, speed: 105,
-        vs: { gong: 1.9, building: 0.9 }, bounty: 8, cost: 22, locked: true, radius: 24,
+        kind: 'qi', glyph: '骑', name: '骑兵', hp: 255, dmg: 22, cd: 1.1, range: 38, speed: 105,
+        vs: { gong: 1.9, building: 0.9 }, bounty: 12, cost: 33, locked: true, radius: 18,
     },
     che: {
-        kind: 'che', glyph: '车', name: '投石车', hp: 160, dmg: 46, cd: 3.2, range: 280, speed: 40,
-        vs: { building: 3, qiang: 0.4, gong: 0.4, qi: 0.4, che: 0.4 }, shot: 'stone', bounty: 12, cost: 40, locked: true, radius: 26,
+        kind: 'che', glyph: '车', name: '投石车', hp: 240, dmg: 69, cd: 3.2, range: 280, speed: 40,
+        vs: { building: 3, qiang: 0.4, gong: 0.4, qi: 0.4, che: 0.4 }, shot: 'stone', bounty: 18, cost: 60, locked: true, radius: 20,
     },
     /** 主城卫队：只能在主城花大价钱买，守在大本营附近，不出去推线 */
     wei: {
-        kind: 'wei', glyph: '卫', name: '卫兵', hp: 900, dmg: 40, cd: 0.9, range: 40, speed: 95,
-        vs: {}, bounty: 30, cost: 0, radius: 27,
+        kind: 'wei', glyph: '卫', name: '卫兵', hp: 1350, dmg: 60, cd: 0.9, range: 40, speed: 95,
+        vs: {}, bounty: 45, cost: 0, radius: 20,
     },
 };
 export const UNIT_ORDER: UnitKind[] = ['qiang', 'gong', 'qi', 'che'];
@@ -88,11 +88,11 @@ export const BUILDINGS = {
 /** 每条路的兵营同时出兵，间隔（秒） */
 export const SPAWN_EVERY = 14;
 /** 一队几个兵 = 基础数 + 兵营等级 */
-export const SQUAD_BASE = 3;
+export const SQUAD_BASE = 2;
 /** 兵营升级价（升到 2、3、4 级） */
 export const BARRACKS_UPGRADE = [90, 160, 260];
 /** 加派一队：按当前兵种单价 × 人数；每条路的兵营加派完要等一会儿才能再派 */
-export const REINFORCE_SIZE = 3;
+export const REINFORCE_SIZE = 2;
 export const REINFORCE_CD = 20;
 
 // ======================= 主城卫队 =======================

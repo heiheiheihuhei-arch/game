@@ -3,15 +3,15 @@ import { createNode } from '../core/Nodes';
 import { Battle } from './Battle';
 import { LANES, WORLD_H, WORLD_W } from './MapDef';
 
-/** 镜头：地图比屏幕宽，左右移动 world 节点来"拖动"视野，边缘不出界；高度正好一屏，不上下动 */
+/** 镜头：移动 world 节点来"拖动"视野，边缘不出界；地图主要是横向的，上下只能拖一点 */
 export class CameraCtl {
     x = 0;
     y = 0;
 
     constructor(private readonly world: Node) { this.apply(); }
 
-    pan(dx: number) { this.x -= dx; this.apply(); }
-    focus(x: number) { this.x = x; this.apply(); }
+    pan(dx: number, dy: number) { this.x -= dx; this.y -= dy; this.apply(); }
+    focus(x: number, y = this.y) { this.x = x; this.y = y; this.apply(); }
 
     /** 屏幕（界面）坐标 → 地图坐标 */
     toWorld(ux: number, uy: number): [number, number] { return [ux + this.x, uy + this.y]; }
@@ -49,7 +49,7 @@ export class Minimap {
             e.propagationStopped = true;
             const loc = e.getUILocation();
             const p = this.node.getComponent(UITransform)!.convertToNodeSpaceAR(new Vec3(loc.x, loc.y, 0));
-            this.cam.focus(p.x / MM_W * WORLD_W);
+            this.cam.focus(p.x / MM_W * WORLD_W, p.y / MM_H * WORLD_H);
             this.draw();
         };
         this.node.on(Node.EventType.TOUCH_START, jump);

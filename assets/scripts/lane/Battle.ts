@@ -198,8 +198,8 @@ export class Battle {
         const dmgMul = 1 + st.tech.weapon * TECH_STEP, hpMul = 1 + st.tech.armor * TECH_STEP;
         for (let i = 0; i < n; i++) {
             // 从兵营门口排成一列走出去
-            const s = b.s + side * (b.radius + 8) - side * i * 34;
-            const u = new Unit(this.actors, def, side, lane, s, (Math.random() - 0.5) * 56, dmgMul, hpMul);
+            const s = b.s + side * (b.radius + 8) - side * i * 30;
+            const u = new Unit(this.actors, def, side, lane, s, (Math.random() - 0.5) * 100, dmgMul, hpMul);
             [u.x, u.y] = lanePoint(lane, s, u.lat);
             this.units.push(u);
         }
