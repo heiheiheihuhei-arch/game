@@ -1,0 +1,12 @@
+{
+  "note": "Codex 2026-10-16 retry: remove decorative calligraphy from the sweep skill icon.",
+  "style": "Rounded watercolor game icon, simple high-contrast motif, warm ivory paper ground; no text, no Chinese characters, no stamp, no watermark",
+  "jobs": [
+    {
+      "id": "icon_sweep_clean",
+      "count": 1,
+      "size": "1024x1024",
+      "prompt": "Square game skill icon. One jade-green crescent-blade makes a single clear circular sweep trail around an empty center, with only a few tiny leaves caught in the motion. Keep the blade and trail large and readable at small scale. Light warm ivory paper background with restrained watercolor texture. No frame, no lettering, no calligraphy, no symbols, no stamp, no person, no extra weapons, no watermark."
+    }
+  ]
+}

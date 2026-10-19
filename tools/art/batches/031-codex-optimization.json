@@ -1,0 +1,76 @@
+{
+  "note": "Codex 2026-10-16 after user authorization: Q-version anthropomorphic Chinese-character enemies, Guan Yu skill icons, Hulao Pass scene assets. Keep all generated candidates in art/raw until visually checked; only selected, prepared outputs go to art/inbox.",
+  "style": "Chinese watercolor and light ink wash combined with rounded, dimensional toy-like Q-version game art; warm rice-paper palette, clean silhouette, readable at small game scale; no text, no seals, no signature, no watermark",
+  "jobs": [
+    {
+      "id": "zei_body",
+      "count": 2,
+      "size": "1536x2048",
+      "refs": ["assets/art/heroes/guanyu/q_body.png"],
+      "prompt": "Create one full-body anthropomorphic Chinese character for a game enemy. The complete orthodox simplified Chinese character「贼」itself is the character's body, with its left-right structure unmistakably readable. Integrate the left 貝 component as a small wooden shield while keeping the 貝 strokes visibly recognizable; the right 戎 component remains a clear part of the same body. Put expressive eyes and brows directly on the upper strokes of the character. Let existing character strokes form short arms and feet; do not add a separate human body or a person standing beside the character. Ochre and muted yellow-brown body, simple yellow head wrap, comic but cunning expression. Slight three-quarter front view facing right, asymmetrical character design must not be mirrored. No weapon. Isolated centered subject on pure white background with generous margins. Match only the rounded dimensional material and watercolor rendering of reference image 1; do not copy its character, pose, clothes or weapon."
+    },
+    {
+      "id": "bing_body",
+      "count": 2,
+      "size": "1536x2048",
+      "refs": ["assets/art/heroes/guanyu/q_body.png"],
+      "prompt": "Create one full-body anthropomorphic Chinese character for a game enemy. The complete orthodox simplified Chinese character「兵」itself is the body and remains unmistakably readable, with correct stroke order and proportions. Integrate a small iron helmet on the top strokes. Put a pair of expressive eyes and brows directly on the center of the character strokes. The character's own horizontal strokes form short arms; the lower 八 strokes form two short feet. Do not add a separate human torso, separate limbs, or a small person standing beside the character. Deep blue-gray lacquered body, warm iron helmet, alert but slightly nervous expression. Slight three-quarter front view facing right. Isolated centered subject on pure white background, full silhouette visible, generous margins. Match only the rounded dimensional material and watercolor rendering of reference image 1; do not copy its character, pose, clothes or weapon."
+    },
+    {
+      "id": "bing_spear",
+      "count": 1,
+      "size": "1024x1536",
+      "refs": ["assets/art/enemies/zei/ge.png"],
+      "prompt": "One isolated Q-version ancient Chinese infantry spear, no character. Full weapon vertical and centered, spearhead at top and butt at bottom. The steel spear blade faces left with its sharpened edge clearly on the left. Pale brown wood shaft, small dark red tassel under the spearhead, restrained iron fittings. Watercolor ink-wash game illustration matching reference image 1 in material and finish. Pure white background, no text, no seal, no shadow touching the crop."
+    },
+    {
+      "id": "icon_guo_wuguan",
+      "count": 1,
+      "size": "1024x1024",
+      "refs": ["assets/art/heroes/guanyu/q_blade.png"],
+      "prompt": "Square game skill icon, no words or letters. A jade-green Guan Yu crescent-blade sweeps forward through five small successive arcs, clearly conveying a five-step advancing combo. Bold central silhouette, compact framing, warm parchment and muted ink background, rounded dimensional watercolor game-art matching reference image 1. One icon only, no border text, no seal, no watermark."
+    },
+    {
+      "id": "icon_gu_bone",
+      "count": 1,
+      "size": "1024x1024",
+      "refs": ["assets/art/heroes/guanyu/q_body.png"],
+      "prompt": "Square game skill icon, no words or letters. A bright green healing aura gently encircles one small clean white bone and a jade pulse of light, conveying Guanyu's bone-healing story without blood or gore. Bold central silhouette, compact framing, warm parchment and muted ink background, rounded dimensional watercolor game-art matching reference image 1. One icon only, no border text, no seal, no watermark."
+    },
+    {
+      "id": "icon_sweep",
+      "count": 1,
+      "size": "1024x1024",
+      "refs": ["assets/art/heroes/guanyu/q_blade.png"],
+      "prompt": "Square game skill icon, no words or letters. A jade-green crescent-blade spins one and a half turns in a clear circular sweep, with leaves and light brush strokes pulled into the rotation. Bold central silhouette, compact framing, warm parchment and muted ink background, rounded dimensional watercolor game-art matching reference image 1. One icon only, no border text, no seal, no watermark."
+    },
+    {
+      "id": "icon_wine_huaxiong",
+      "count": 1,
+      "size": "1024x1024",
+      "refs": ["assets/art/heroes/guanyu/cutin.png"],
+      "prompt": "Square game skill icon, no words or letters. A small steaming bronze wine cup in the foreground and a swift jade-green crescent-blade slash behind it, evoking Guan Yu's warm-wine duel; no people or faces. Bold central silhouette, compact framing, warm parchment and muted ink background, rounded dimensional watercolor game-art matching reference image 1. One icon only, no border text, no seal, no watermark."
+    },
+    {
+      "id": "hulao_wall",
+      "count": 1,
+      "size": "1536x1024",
+      "refs": ["assets/art/scene/fence.png"],
+      "prompt": "One isolated horizontal section of an ancient Chinese pass wall, a repeating gray-brown stone wall section with crenellations and a modest timber watch platform. Slight top-down three-quarter game view, ends cut cleanly at left and right so adjacent wall sections can connect. Muted warm ink-wash watercolor, simple readable shapes, no people, no writing, pure white background with generous transparent-cutout-friendly margins. Match reference image 1 only for painted material and restrained palette."
+    },
+    {
+      "id": "hulao_gate",
+      "count": 1,
+      "size": "1536x1024",
+      "refs": ["assets/art/scene/big_tent.png"],
+      "prompt": "One isolated ancient Chinese fortress gatehouse for the Hulao Pass battlefield, viewed from a slight top-down three-quarter angle. Sturdy gray stone gate with a dark open passage, simple timber doors and a small red-brown military pennant; no readable writing and no characters. Wide compact silhouette, muted ink-wash watercolor, warm paper palette, clean playable shape. Pure white background, generous cutout-friendly margin. Match reference image 1 only for painted material and restrained palette."
+    },
+    {
+      "id": "arrow_warning",
+      "count": 1,
+      "size": "1024x1024",
+      "refs": ["assets/art/fx/hit_spark.png"],
+      "prompt": "A single top-down ground warning decal for an incoming arrow volley in a Chinese Three Kingdoms game. A clear circular impact zone marked by a broken muted red-orange ink ring, a few small inward-pointing arrowhead silhouettes, transparent-looking clean center. Flat readable game effect, no arrows in flight, no words, no people, no background, no seal or watermark. Centered with generous margin, restrained watercolor ink style matching reference image 1."
+    }
+  ]
+}

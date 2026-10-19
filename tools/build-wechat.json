@@ -1,0 +1,21 @@
+{
+  "platform": "wechatgame",
+  "name": "wenzi-lane",
+  "outputName": "wechatgame",
+  "debug": false,
+  "md5Cache": false,
+  "startScene": "7b0f0400-0629-4ef5-8066-e84086ed69e8",
+  "scenes": [
+    {
+      "url": "db://assets/main.scene",
+      "uuid": "7b0f0400-0629-4ef5-8066-e84086ed69e8"
+    }
+  ],
+  "packages": {
+    "wechatgame": {
+      "appid": "wx4fd4fe7acd11f03c",
+      "orientation": "landscape",
+      "separateEngine": false
+    }
+  }
+}

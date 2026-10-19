@@ -1,0 +1,13 @@
+{
+  "note": "Codex 2026-10-16 final Zei candidate: use the existing shield-plus-glyph silhouette as structural reference, add a face to the glyph and keep it distinct from Guan Yu.",
+  "style": "Rounded three-dimensional Q-version game character with gentle watercolor texture, warm ochre palette, clear silhouette; no writing, no extra glyph, no seal, no watermark",
+  "jobs": [
+    {
+      "id": "zei_body_shield",
+      "count": 1,
+      "size": "1536x2048",
+      "refs": ["assets/art/enemies/zei/body.png"],
+      "prompt": "Redesign reference image 1 as one single anthropomorphic Chinese-character game enemy. Retain its clear left-right 贼 glyph silhouette and make the left 貝 component itself read as the small attached wooden shield; the right 戎 component is the same body's main mass. Add a small expressive pair of eyes directly on the upper right radical strokes. The whole readable character 贼 itself remains the only body. Its character strokes create the arms and feet. The shield is integrated as the left 貝 radical, not a detached held item. No duplicate glyph, no separate humanoid, no person beside the letter, no beard, no mustache, no facial hair, no hair, no robe, no Guan Yu cues, no weapon. Ochre yellow-brown body with a simple yellow head wrap. Three-quarter front view facing right. Keep the left/right structure asymmetrical and do not mirror. White background, full figure centered with generous margins. Use reference only to preserve the letter-and-shield structure; add dimensional rounded watercolor material, not the flat texture."
+    }
+  ]
+}

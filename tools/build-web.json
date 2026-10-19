@@ -1,0 +1,19 @@
+{
+  "platform": "web-mobile",
+  "name": "wenzi-lane",
+  "outputName": "web-mobile",
+  "debug": false,
+  "md5Cache": false,
+  "startScene": "7b0f0400-0629-4ef5-8066-e84086ed69e8",
+  "scenes": [
+    {
+      "url": "db://assets/main.scene",
+      "uuid": "7b0f0400-0629-4ef5-8066-e84086ed69e8"
+    }
+  ],
+  "packages": {
+    "web-mobile": {
+      "orientation": "auto"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "note": "Codex 2026-10-16 retry only candidates that failed visual review; no references to prevent copying a character's beard or adding decorative lettering.",
+  "style": "A polished rounded dimensional Chinese watercolor game illustration, restrained clean colors and simplified toy-like shapes; no writing, no decorative characters, no seals, no signature, no watermark",
+  "jobs": [
+    {
+      "id": "bing_body_clean",
+      "count": 1,
+      "size": "1536x2048",
+      "prompt": "One original full-body Q-version game enemy whose complete orthodox simplified Chinese glyph 兵 itself forms the single body. Keep the entire Chinese character 兵 unmistakably readable and its structure correct. Upper strokes make a compact square body, center space has only two round eyes and brows, lower 八 strokes are its two feet; two short arms extend naturally from the character's horizontal stroke. No human body, no separate figure, no beard, no mustache, no facial hair, no long hair, no robe, no weapon. A small plain iron helmet sits directly on top of the glyph. Deep blue-gray, cute alert expression. Three-quarter front view facing right. Pure white background, isolated centered full silhouette with generous margins. This must look like an anthropomorphic Chinese character, not a person standing beside a character."
+    },
+    {
+      "id": "icon_wine_huaxiong_clean",
+      "count": 1,
+      "size": "1024x1024",
+      "prompt": "Square game skill icon with no writing, no letters, no Chinese characters, no decorative symbols, no seal, no border, no person or silhouette. One small plain bronze wine cup with two simple steam curls in the foreground and a single jade-green crescent blade arc sweeping behind it. Centered compact composition, instantly readable at 256 pixels. Warm light parchment background with a little ink texture, rounded dimensional watercolor game illustration. No other objects."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "note": "Codex 2026-10-16 visual review retry: remove Guan Yu identity cues and make the shield the left radical, not a second character.",
+  "style": "Rounded dimensional Q-version game character, watercolor ink finish, clean readable silhouette; no text beyond the required single glyph, no stamp or watermark",
+  "jobs": [
+    {
+      "id": "zei_body_clean",
+      "count": 1,
+      "size": "1536x2048",
+      "prompt": "One full-body Q-version anthropomorphic Chinese character. Its complete orthodox simplified Chinese glyph 贼 itself is the single body and must be unmistakably readable. The left 貝 radical itself is a small integrated shield, attached as the left half of this same glyph; the right 戎 radical forms the right half and lower body. The shield is not floating, not a held extra object, and there is no duplicate 贼 glyph. Put only eyes and eyebrows on the upper strokes. The glyph's own strokes make its arms and legs. Ochre yellow-brown, small yellow head wrap. No beard, no mustache, no facial hair, no long hair, no robe, no Guan Yu cues, no separate human body, no person beside the glyph, no weapon. Slight three-quarter front view facing right. Asymmetrical; do not mirror. Pure white background with a centered full silhouette and generous margins."
+    }
+  ]
+}
