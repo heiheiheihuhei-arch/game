@@ -58,6 +58,11 @@ export interface UnitAnim {
     win: [number, number];
 }
 
+/** 建筑动画的全部帧路径，开局预加载用 */
+export function buildingFrames(a: BuildingAnim): string[] {
+    return [a.me, a.foe].flatMap(dir => Array.from({ length: a.death[1] }, (_, i) => `${dir}/f_${i}`));
+}
+
 /** 某个兵种动画的全部帧路径，开局预加载用 */
 export function animFrames(a: UnitAnim): string[] {
     const n = Math.max(a.idle[1], a.draw[1], a.after[1], a.death[1], a.walk[1], a.win[1]);
@@ -116,7 +121,24 @@ export interface BuildingArt {
     w?: number;
     h?: number;
     rubbleW: number;
+    /** 逐帧动画的建筑：有了就不用上面的静态图 */
+    anim?: BuildingAnim;
 }
+
+/** 建筑逐帧动画（tools/art/build_buildings.py 生成）：三种血量各一段闲置循环、会射箭的三种血量各一段攻击、一段倒塌（停在最后一帧的废墟） */
+export interface BuildingAnim {
+    me: string;
+    foe: string;
+    /** 画面里地基显示多宽（像素）：按它缩放整张图 */
+    foot: number;
+    /** 两方各自的画布尺寸和地基位置（脚本打印的 canvasW/canvasH/footW/footBottom/footCx） */
+    meBox: AnimBox;
+    foeBox: AnimBox;
+    idle: [number, number][];
+    attack?: [number, number][];
+    death: [number, number];
+}
+export interface AnimBox { canvasW: number; canvasH: number; footW: number; footBottom: number; footCx: number }
 /** 血量低于这个比例换残破图并冒烟，低于 DAMAGE_FIRE 再着火 */
 export const DAMAGE_SMOKE = 0.6;
 export const DAMAGE_FIRE = 0.3;
@@ -124,20 +146,24 @@ export const DAMAGE_FIRE = 0.3;
 export const BUILDINGS = {
     tower: {
         name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40,
-        img: { me: 'q/tower_blue', foe: 'q/tower_red', meBroken: 'q/tower_blue_broken', foeBroken: 'q/tower_red_broken', rubble: 'q/rubble_small', h: 80, rubbleW: 64 },
+        img: { me: 'q/tower_blue', foe: 'q/tower_red', meBroken: 'q/tower_blue_broken', foeBroken: 'q/tower_red_broken', rubble: 'q/rubble_small', h: 80, rubbleW: 64,
+            anim: { me: 'q/b1_tower_blue', foe: 'q/b1_tower_red', foot: 64, meBox: { canvasW: 160, canvasH: 160, footW: 102, footBottom: 12, footCx: 82 }, foeBox: { canvasW: 160, canvasH: 160, footW: 112, footBottom: 4, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], attack: [[24, 32], [32, 40], [40, 48]], death: [48, 60] } },
     } as BuildingDef,
     barracks: {
         name: '兵营', glyph: '营', hp: 2200, bounty: 60,
-        img: { me: 'q/tent_blue', foe: 'q/tent_red', rubble: 'q/rubble_small', h: 96, rubbleW: 90 },
+        img: { me: 'q/tent_blue', foe: 'q/tent_red', rubble: 'q/rubble_small', h: 96, rubbleW: 90,
+            anim: { me: 'q/b1_barracks_blue', foe: 'q/b1_barracks_red', foot: 112, meBox: { canvasW: 167, canvasH: 160, footW: 132, footBottom: 20, footCx: 85 }, foeBox: { canvasW: 166, canvasH: 160, footW: 132, footBottom: 15, footCx: 82 }, idle: [[0, 8], [8, 16], [16, 24]], death: [24, 36] } },
     } as BuildingDef,
     /** 大本营门前的两座门牙塔：比路上的塔更硬、打得更疼 */
     gate: {
         name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60,
-        img: { me: 'q/tower_blue', foe: 'q/tower_red', meBroken: 'q/tower_blue_broken', foeBroken: 'q/tower_red_broken', rubble: 'q/rubble_small', h: 94, rubbleW: 74 },
+        img: { me: 'q/tower_blue', foe: 'q/tower_red', meBroken: 'q/tower_blue_broken', foeBroken: 'q/tower_red_broken', rubble: 'q/rubble_small', h: 94, rubbleW: 74,
+            anim: { me: 'q/b1_tower_blue', foe: 'q/b1_tower_red', foot: 74, meBox: { canvasW: 160, canvasH: 160, footW: 102, footBottom: 12, footCx: 82 }, foeBox: { canvasW: 160, canvasH: 160, footW: 112, footBottom: 4, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], attack: [[24, 32], [32, 40], [40, 48]], death: [48, 60] } },
     } as BuildingDef,
     base: {
         name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0,
-        img: { me: 'q/castle_blue', foe: 'q/castle_red', meBroken: 'q/castle_blue_broken', foeBroken: 'q/castle_red_broken', rubble: 'q/rubble_big', w: 250, rubbleW: 220 },
+        img: { me: 'q/castle_blue', foe: 'q/castle_red', meBroken: 'q/castle_blue_broken', foeBroken: 'q/castle_red_broken', rubble: 'q/rubble_big', w: 250, rubbleW: 220,
+            anim: { me: 'q/b1_base_blue', foe: 'q/b1_base_red', foot: 200, meBox: { canvasW: 167, canvasH: 160, footW: 135, footBottom: 10, footCx: 85 }, foeBox: { canvasW: 160, canvasH: 160, footW: 129, footBottom: 17, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], death: [24, 36] } },
     } as BuildingDef,
 };
 

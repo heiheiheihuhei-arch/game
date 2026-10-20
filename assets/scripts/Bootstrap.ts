@@ -2,7 +2,7 @@ import { _decorator, Color, Component, ResolutionPolicy, view } from 'cc';
 import { createLabel } from './core/Nodes';
 import { AudioMgr } from './core/AudioMgr';
 import { preloadSprites } from './core/Res';
-import { animFrames, UNITS } from './lane/Defs';
+import { animFrames, BUILDINGS, buildingFrames, UNITS } from './lane/Defs';
 import { Game } from './lane/Game';
 
 const { ccclass } = _decorator;
@@ -24,7 +24,8 @@ export class Bootstrap extends Component {
         // 兵是出兵时才创建的：动画帧和残破图全部载好再开局，不然网慢时兵出来是隐身的
         const loading = createLabel('Loading', this.node, '加载中…', 36, new Color(250, 236, 200, 255));
         preloadSprites(['q/map', 'q/rubble_small', 'q/rubble_big', 'q/tower_blue_broken', 'q/tower_red_broken', 'q/castle_blue_broken', 'q/castle_red_broken',
-            ...Object.values(UNITS).flatMap(d => [d.anim, d.animFoe].flatMap(a => a ? animFrames(a) : []))])
+            ...Object.values(UNITS).flatMap(d => [d.anim, d.animFoe].flatMap(a => a ? animFrames(a) : [])),
+            ...Object.values(BUILDINGS).flatMap(d => d.img.anim ? buildingFrames(d.img.anim) : [])])
             .then(() => { loading.node.destroy(); this.newGame(); });
     }
 

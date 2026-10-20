@@ -1,7 +1,7 @@
 import { Color, Graphics, Label, Node, Sprite, UIOpacity, UITransform } from 'cc';
 import { createGraphics, createLabel, createNode } from '../core/Nodes';
 import { createSprite, readySprite } from '../core/Res';
-import { BuildingDef, DAMAGE_SMOKE, SIDE_COLOR, UnitDef } from './Defs';
+import { BuildingDef, DAMAGE_FIRE, DAMAGE_SMOKE, SIDE_COLOR, UnitDef } from './Defs';
 
 export type Side = 1 | -1;
 
@@ -313,7 +313,13 @@ export class Unit {
 
 export type BuildingKind = 'tower' | 'gate' | 'barracks' | 'base';
 
-/** 箭塔、兵营、大本营：完好 → 残破（冒烟、着火由 Battle 放粒子）→ 只剩废墟地基 */
+/** 建筑动画：闲置每秒几帧；射箭这一段多长、第几成放箭；倒塌多长 */
+const B_IDLE_FPS = 7;
+const B_ATTACK_TIME = 0.6;
+const B_RELEASE = 0.5;
+const B_DEATH_TIME = 1.4;
+
+/** 箭塔、兵营、大本营：完好 → 受伤 → 重伤（逐帧动画里自己冒烟着火）→ 倒塌成废墟 */
 export class Building {
     readonly node: Node;
     readonly maxHp: number;
@@ -325,10 +331,18 @@ export class Building {
     private readonly bar: Graphics;
     private readonly whole: Node;
     private readonly broken: Node | null;
-    private readonly rubble: Node;
+    private readonly rubble: Node | null;
     private readonly shadow: Graphics;
     private flash = 0;
     private shownHp = -1;
+    /** 逐帧动画的建筑 */
+    private readonly anim: Sprite | null = null;
+    private readonly animDir: string = '';
+    private shownFrame = '';
+    private animT = Math.random() * 5;
+    private attackT = -1;
+    private onRelease: (() => void) | null = null;
+    private deathT = -1;
     /** 不属于某一路的建筑（大本营、门牙塔）在每条路上对应的位置 */
     sOn: number[] = [];
 
@@ -342,19 +356,34 @@ export class Building {
         this.shadow = createGraphics('Shadow', this.node);
         const art = def.img, me = side === 1;
         const foot = -this.radius * 0.45;
-        // 建筑图脚底放在地面上
-        const put = (name: string, path: string, w?: number, h?: number) => {
-            const n = createSprite(name, this.node, path, { width: w, height: h, anchorY: 0 });
+        if (art.anim) {
+            // 逐帧动画：按地基宽度缩放，锚点放在地基底边中点
+            const a = art.anim, box = me ? a.meBox : a.foeBox, k = a.foot / box.footW;
+            this.animDir = me ? a.me : a.foe;
+            const n = createSprite('Anim', this.node, `${this.animDir}/f_0`, { width: box.canvasW * k, height: box.canvasH * k });
+            n.getComponent(UITransform)!.setAnchorPoint(box.footCx / box.canvasW, box.footBottom / box.canvasH);
             n.setPosition(0, foot);
-            return n;
-        };
-        this.rubble = put('Rubble', art.rubble, art.rubbleW);
-        this.rubble.active = false;
-        const broken = me ? art.meBroken : art.foeBroken;
-        this.broken = broken ? put('Broken', broken, art.w, art.h) : null;
-        if (this.broken) this.broken.active = false;
-        this.whole = put('Whole', me ? art.me : art.foe, art.w, art.h);
-        this.height = art.h ?? (art.w ?? 100) * 0.9;
+            this.anim = n.getComponent(Sprite);
+            this.anim!.trim = false;
+            this.whole = n;
+            this.broken = null;
+            this.rubble = null;
+            this.height = box.canvasH * k * 0.7;
+        } else {
+            // 建筑图脚底放在地面上
+            const put = (name: string, path: string, w?: number, h?: number) => {
+                const n = createSprite(name, this.node, path, { width: w, height: h, anchorY: 0 });
+                n.setPosition(0, foot);
+                return n;
+            };
+            this.rubble = put('Rubble', art.rubble, art.rubbleW);
+            this.rubble.active = false;
+            const broken = me ? art.meBroken : art.foeBroken;
+            this.broken = broken ? put('Broken', broken, art.w, art.h) : null;
+            if (this.broken) this.broken.active = false;
+            this.whole = put('Whole', me ? art.me : art.foe, art.w, art.h);
+            this.height = art.h ?? (art.w ?? 100) * 0.9;
+        }
         this.shadow.fillColor = new Color(20, 14, 10, 70);
         this.shadow.ellipse(0, foot + 4, this.radius * 1.2, this.radius * 0.42);
         this.shadow.fill();
@@ -364,35 +393,86 @@ export class Building {
     get alive() { return this.hp > 0; }
     get attacks() { return !!this.def.attack && this.alive; }
     get ratio() { return this.hp / this.maxHp; }
+    /** 逐帧动画的建筑自己会冒烟着火，Battle 不用再放粒子 */
+    get animated() { return !!this.anim; }
 
     hurt(d: number) {
         if (!this.alive) return;
         this.hp -= d;
         this.flash = 0.08;
         if (this.hp <= 0) {
-            // 被拆：只剩一小块地基
             this.hp = 0;
-            this.whole.active = false;
-            if (this.broken) this.broken.active = false;
-            this.rubble.active = true;
             this.shadow.clear();
             this.bar.clear();
+            if (this.anim) { this.deathT = 0; return; }
+            // 被拆：只剩一小块地基
+            this.whole.active = false;
+            if (this.broken) this.broken.active = false;
+            this.rubble!.active = true;
         }
+    }
+
+    /** 射箭：有动画的塔先拉弓，拉到一半放箭；没有动画的立刻放 */
+    fire(release: () => void) {
+        const a = this.def.img.anim;
+        if (!a?.attack) { release(); return; }
+        this.attackT = 0;
+        this.onRelease = release;
+    }
+
+    private setFrame(i: number) {
+        const path = `${this.animDir}/f_${i}`;
+        if (path === this.shownFrame) return;
+        const sf = readySprite(path);
+        if (!sf) return;
+        this.shownFrame = path;
+        this.anim!.spriteFrame = sf;
+    }
+
+    private syncAnim(dt: number) {
+        const a = this.def.img.anim!;
+        const pick = ([from, to]: [number, number], k: number) => from + Math.min(to - from - 1, Math.floor(k * (to - from)));
+        if (this.deathT >= 0) {
+            this.deathT += dt;
+            this.setFrame(pick(a.death, this.deathT / B_DEATH_TIME));
+            this.anim!.color = Color.WHITE;
+            return;
+        }
+        const state = this.ratio < DAMAGE_FIRE ? 2 : this.ratio < DAMAGE_SMOKE ? 1 : 0;
+        this.animT += dt;
+        let f: number;
+        if (this.attackT >= 0 && a.attack) {
+            this.attackT += dt;
+            const k = this.attackT / B_ATTACK_TIME;
+            if (k >= B_RELEASE && this.onRelease) { const r = this.onRelease; this.onRelease = null; r(); }
+            f = pick(a.attack[state], Math.min(0.999, k));
+            if (k >= 1) this.attackT = -1;
+        } else {
+            const [from, to] = a.idle[state];
+            f = from + Math.floor(this.animT * B_IDLE_FPS) % (to - from);
+        }
+        this.setFrame(f);
+        this.anim!.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
     }
 
     sync(dt: number) {
         if (this.flash > 0) this.flash -= dt;
-        if (!this.alive) return;
-        // 血量过半多就换残破图；没有残破图的（帐篷）压暗一些
-        const hurt = this.ratio < DAMAGE_SMOKE;
-        if (this.broken) {
-            this.broken.active = hurt;
-            this.whole.active = !hurt;
+        if (this.anim) {
+            this.syncAnim(dt);
+            if (!this.alive) return;
         } else {
-            this.whole.getComponent(Sprite)!.color = hurt ? BURNT : Color.WHITE;
+            if (!this.alive) return;
+            // 血量过半多就换残破图；没有残破图的（帐篷）压暗一些
+            const hurt = this.ratio < DAMAGE_SMOKE;
+            if (this.broken) {
+                this.broken.active = hurt;
+                this.whole.active = !hurt;
+            } else {
+                this.whole.getComponent(Sprite)!.color = hurt ? BURNT : Color.WHITE;
+            }
+            const s = this.flash > 0 ? 1.05 : 1;
+            (this.broken?.active ? this.broken : this.whole).setScale(s, s);
         }
-        const s = this.flash > 0 ? 1.05 : 1;
-        (this.broken?.active ? this.broken : this.whole).setScale(s, s);
         if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
             // 血条画在脚下：上路的塔靠近屏幕顶端，画在上面会被状态栏挡住

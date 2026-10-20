@@ -362,11 +362,15 @@ export class Battle {
         }
         if (!best) return;
         b.cdT = atk.cd;
-        this.shoot(b.side, b.x, b.y + b.radius, best, atk.dmg, false);
+        const t = best;
+        // 有射箭动画的塔：拉弓到一半才放箭，箭从塔上的弓兵那里飞出去
+        b.fire(() => { if (t.alive) this.shoot(b.side, b.x, b.y + (b.animated ? b.height * 0.75 : b.radius), t, atk.dmg, false); });
     }
 
     /** 残血的建筑冒烟、着火；拆掉后废墟再冒几秒烟 */
     private burnFx(b: Building, dt: number) {
+        // 逐帧动画的建筑：烟火和倒塌都画在动画里了
+        if (b.animated) return;
         const spread = b.radius * 0.8, jx = () => b.x + (Math.random() - 0.5) * 2 * spread;
         if (!b.alive) {
             const since = this.time - (this.razedAt.get(b) ?? -99);
