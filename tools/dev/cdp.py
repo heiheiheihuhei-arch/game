@@ -74,7 +74,7 @@ def main():
                              "--window-size=1560,720", "--use-angle=swiftshader", "--enable-unsafe-swiftshader",
                              "--no-first-run", "about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        for _ in range(50):
+        for _ in range(150):
             try:
                 tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json").read())
                 page = next(t for t in tabs if t["type"] == "page")

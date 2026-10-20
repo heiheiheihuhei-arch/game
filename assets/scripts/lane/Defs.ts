@@ -66,9 +66,9 @@ export function animFrames(a: UnitAnim): string[] {
 
 export const UNITS: Record<UnitKind, UnitDef> = {
     qiang: {
-        kind: 'qiang', glyph: '枪', name: '枪兵', hp: 195, dmg: 16, cd: 1.0, range: 52, speed: 62,
+        kind: 'qiang', glyph: '枪', name: '枪兵', hp: 195, dmg: 16, cd: 1.0, range: 70, speed: 62,
         vs: { qi: 1.8, building: 1 }, bounty: 8, cost: 18, radius: 16,
-        anim: { me: 'q/u6_qiang_blue', foe: 'q/u6_qiang_red', h: 73, idle: [0, 10], walk: [10, 20], draw: [20, 27], after: [27, 35], drawTime: 0.3, afterTime: 0.32, death: [35, 47], win: [47, 59], walkFps: 12 },
+        anim: { me: 'q/u7_qiang_blue', foe: 'q/u7_qiang_red', h: 87, idle: [0, 10], walk: [10, 20], draw: [20, 26], after: [26, 34], drawTime: 0.32, afterTime: 0.4, death: [34, 46], win: [46, 58], walkFps: 12 },
     },
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 112, dmg: 15, cd: 1.15, range: 190, speed: 58,

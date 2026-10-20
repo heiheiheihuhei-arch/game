@@ -18,7 +18,8 @@ import build_video_unit as bvu  # noqa: E402
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 VID = ROOT / "art" / "raw" / "video2"
 OUT = ROOT / "assets" / "art" / "q"
-PREFIX = "u6_"
+import os
+PREFIX = os.environ.get("UNIT_PREFIX", "u6_")
 HEIGHT = 160
 
 
@@ -77,7 +78,7 @@ def first_move(video, start=0, thresh=2.5):
 # back=False：收招回不到起始姿势（枪兵），用「刺出 + 倒放收回」；die_from：阵亡视频开头 AI 加了闪光特效，从这一帧之后开始找
 UNITS = {
     "gong": {"idle": "gong_idle", "run": "gong_run", "attack": "gong_attack", "die": "gong_die", "win": "gong_win", "atk_frames": 14, "back": True},
-    "qiang": {"idle": "qiang_idle", "run": "qiang_run", "attack": "qiang_attack", "die": "qiang_die", "win": "qiang_win", "atk_frames": 8, "back": False},
+    "qiang": {"idle": "qiang_idle", "run": "qiang_run", "attack": "qiang_attack", "die": "qiang_die", "win": "qiang_win", "atk_frames": 14, "back": True},
     "qi": {"idle": "qi_idle2", "run": "qi_run2", "attack": "qi_attack3", "die": "qi_die", "win": "qi_win", "atk_frames": 14, "back": True,
            "run_from": {"blue": 60}, "die_from": {"blue": 24, "red": 28}},
 }
