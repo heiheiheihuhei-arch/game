@@ -44,6 +44,7 @@ def main():
     ap.add_argument("--dur", type=int, default=4)
     ap.add_argument("--ratio", default="1:1")
     ap.add_argument("--res", default="480p")
+    ap.add_argument("--loop", action="store_true", help="把同一张图也当最后一帧：动作结束时回到开头的姿势，循环或收招时首尾接得上")
     args = ap.parse_args()
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -54,8 +55,10 @@ def main():
                         "color=white:s=16x16[bg];[bg][0]scale2ref[bg][fg];[bg][fg]overlay=shortest=1", "-frames:v", "1", str(flat)], check=True)
         uri = f"data:image/png;base64,{base64.b64encode(flat.read_bytes()).decode()}"
     text = f"{args.prompt} --resolution {args.res} --ratio {args.ratio} --duration {args.dur} --camerafixed true --watermark false"
-    body = {"model": args.model, "content": [{"type": "text", "text": text},
-                                              {"type": "image_url", "image_url": {"url": uri}, "role": "first_frame"}]}
+    content = [{"type": "text", "text": text}, {"type": "image_url", "image_url": {"url": uri}, "role": "first_frame"}]
+    if args.loop:
+        content.append({"type": "image_url", "image_url": {"url": uri}, "role": "last_frame"})
+    body = {"model": args.model, "content": content}
     res = call("POST", BASE, body)
     if "error" in res or "id" not in res:
         sys.exit(f"建任务失败：{json.dumps(res, ensure_ascii=False)[:1200]}")

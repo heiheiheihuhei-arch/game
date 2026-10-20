@@ -23,6 +23,8 @@ const BOW = new Color(110, 70, 36, 255);
 const STRING = new Color(240, 235, 220, 255);
 /** 逐帧动画：受击、阵亡各播多久；阵亡最后这一段慢慢变透明 */
 const HURT_TIME = 0.2;
+const IDLE_FPS = 6;
+const WIN_TIME = 1.2;
 const DEATH_FADE = 0.4;
 export const DEATH_TIME = 0.9;
 
@@ -72,6 +74,8 @@ export class Unit {
     private shownFrame = '';
     private hurtT = 0;
     private deathT = -1;
+    private winT = -1;
+    private idleT = Math.random() * 10;
     private readonly shadow: Graphics;
 
     constructor(parent: Node, readonly def: UnitDef, readonly side: Side, readonly lane: number, public s: number,
@@ -151,12 +155,22 @@ export class Unit {
         this.anim!.spriteFrame = sf;
     }
 
-    /** 逐帧动画选帧：出手 > 受击 > 走路 > 站着。图不翻转：敌我两边各有一套朝向对的图 */
+    /** 一局赢了：播欢呼，播完停在最后一帧 */
+    celebrate() { if (this.winT < 0) this.winT = Math.random() * 0.3; }
+
+    /** 逐帧动画选帧：胜利 > 出手 > 受击 > 走路 > 站着。图不翻转：敌我两边各有一套朝向对的图 */
     private updateAnim(dt: number, walking: boolean) {
         const a = this.animDef!;
         if (this.hurtT > 0) this.hurtT -= dt;
         const pick = ([from, to]: [number, number], k: number) => from + Math.min(to - from - 1, Math.floor(k * (to - from)));
-        let f = a.idle;
+        this.idleT += dt;
+        let f = a.idle[0] + Math.floor(this.idleT * IDLE_FPS) % (a.idle[1] - a.idle[0]);
+        if (this.winT >= 0) {
+            this.winT += dt;
+            this.setFrame(pick(a.win, this.winT / WIN_TIME));
+            this.anim!.color = Color.WHITE;
+            return;
+        }
         if (this.drawT >= 0) {
             f = pick(a.draw, this.drawT / a.drawTime);
         } else if (this.twangT > 0) {
@@ -165,7 +179,7 @@ export class Unit {
             f = pick(a.hurt, 1 - this.hurtT / HURT_TIME);
         }
         // 走路：播走路循环帧（walkT 每秒涨 10）
-        if (walking && f === a.idle) f = a.walk[0] + Math.floor(this.walkT / 10 * a.walkFps) % (a.walk[1] - a.walk[0]);
+        if (walking && this.drawT < 0 && this.twangT <= 0 && this.hurtT <= 0) f = a.walk[0] + Math.floor(this.walkT / 10 * a.walkFps) % (a.walk[1] - a.walk[0]);
         this.setFrame(f);
         this.anim!.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
     }

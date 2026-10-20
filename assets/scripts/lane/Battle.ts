@@ -161,7 +161,17 @@ export class Battle {
     // ---------- 主循环 ----------
 
     update(dt: number) {
-        if (this.winner !== null) { this.fx.update(dt); this.updateFloats(dt); return; }
+        if (this.winner !== null) {
+            // 分出胜负后：赢的一方全体欢呼，输的一方原地站着；倒下的继续播完
+            for (const u of this.units) {
+                if (u.side === this.winner) u.celebrate();
+                u.sync(dt, false);
+            }
+            this.corpses = this.corpses.filter(c => c.updateDeath(dt) || (c.node.destroy(), false));
+            this.fx.update(dt);
+            this.updateFloats(dt);
+            return;
+        }
         this.time += dt;
         this.sides[1].gold += this.income * dt;
         this.sides[-1].gold += this.income * AI.incomeMul * dt;
