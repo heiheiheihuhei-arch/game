@@ -1,4 +1,4 @@
-import { Color, Graphics, Label, Node, Sprite, UITransform } from 'cc';
+import { Color, Graphics, Label, Node, Sprite, UIOpacity, UITransform } from 'cc';
 import { createGraphics, createLabel, createNode } from '../core/Nodes';
 import { createSprite, readySprite } from '../core/Res';
 import { BuildingDef, DAMAGE_SMOKE, SIDE_COLOR, UnitDef } from './Defs';
@@ -21,11 +21,9 @@ const DRAW_TIME = 0.42;
 const TWANG_TIME = 0.18;
 const BOW = new Color(110, 70, 36, 255);
 const STRING = new Color(240, 235, 220, 255);
-/** 逐帧动画：放箭后收手、受击、阵亡各播多久；走路时每秒蹦几下、蹦多高 */
-const AFTER_SHOT_TIME = 0.3;
-const HOPS_PER_SEC = 1.6;
-const HOP_H = 12;
+/** 逐帧动画：受击、阵亡各播多久；阵亡最后这一段慢慢变透明 */
 const HURT_TIME = 0.2;
+const DEATH_FADE = 0.4;
 export const DEATH_TIME = 0.9;
 
 function drawBar(g: Graphics, side: Side, p: number, w: number, y: number) {
@@ -124,6 +122,7 @@ export class Unit {
         if (!this.anim) return false;
         this.deathT = 0;
         this.bar.clear();
+        this.node.addComponent(UIOpacity);
         return true;
     }
 
@@ -136,6 +135,7 @@ export class Unit {
         this.body.setScale(1, 1);
         this.body.angle = 0;
         this.shadow.node.setScale(1 - k, 1 - k);
+        this.node.getComponent(UIOpacity)!.opacity = 255 * Math.min(1, (1 - k) / DEATH_FADE);
         return this.deathT < DEATH_TIME;
     }
 
@@ -155,18 +155,18 @@ export class Unit {
         const pick = ([from, to]: [number, number], k: number) => from + Math.min(to - from - 1, Math.floor(k * (to - from)));
         let f = a.idle;
         if (this.drawT >= 0) {
-            f = pick(a.draw, this.drawT / DRAW_TIME);
+            f = pick(a.draw, this.drawT / a.drawTime);
         } else if (this.twangT > 0) {
-            f = pick(a.after, 1 - this.twangT / AFTER_SHOT_TIME);
+            f = pick(a.after, 1 - this.twangT / a.afterTime);
         } else if (this.hurtT > 0) {
             f = pick(a.hurt, 1 - this.hurtT / HURT_TIME);
         }
         // 蹦跳：前 75% 在空中（正弦弧线，起跳时略拉长），后 25% 落地压扁再弹回
         let air = 0, sx = 1, sy = 1;
         if (walking && f === a.idle) {
-            const p = (this.walkT / 10 * HOPS_PER_SEC) % 1;
+            const p = (this.walkT / 10 * a.hopsPerSec) % 1;
             if (p < 0.75) {
-                air = Math.sin(p / 0.75 * Math.PI) * HOP_H;
+                air = Math.sin(p / 0.75 * Math.PI) * a.hopH;
                 const st = Math.max(0, 1 - p / 0.2) * 0.08;
                 sx = 1 - st; sy = 1 + st;
             } else {
@@ -177,12 +177,12 @@ export class Unit {
         this.setFrame(f);
         this.anim!.node.setScale(sx, sy);
         this.anim!.node.setPosition(0, -this.def.radius * 0.9 + air);
-        this.shadow.node.setScale(1 - air / HOP_H * 0.3, 1 - air / HOP_H * 0.3);
+        this.shadow.node.setScale(1 - air / a.hopH * 0.3, 1 - air / a.hopH * 0.3);
         this.anim!.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
     }
 
-    /** 弓兵出手：搭箭、拉满弦，拉满那一刻调用 release 放箭 */
-    drawBow(towardX: number, release: () => void) {
+    /** 有蓄力的出手（弓兵搭箭拉弦、逐帧动画兵的蓄力）：蓄满那一刻调用 release 放箭 / 打中 */
+    windup(towardX: number, release: () => void) {
         this.bowDir = Math.sign(towardX - this.x) || this.side;
         this.drawT = 0;
         this.onRelease = release;
@@ -228,11 +228,12 @@ export class Unit {
         let pull = 0, arrow = false;
         if (this.drawT >= 0) {
             this.drawT += dt;
-            pull = Math.min(1, this.drawT / DRAW_TIME);
+            const drawTime = this.def.anim?.drawTime ?? DRAW_TIME;
+            pull = Math.min(1, this.drawT / drawTime);
             arrow = true;
-            if (this.drawT >= DRAW_TIME) {
+            if (this.drawT >= drawTime) {
                 this.drawT = -1;
-                this.twangT = this.anim ? AFTER_SHOT_TIME : TWANG_TIME;
+                this.twangT = this.def.anim?.afterTime ?? TWANG_TIME;
                 const fire = this.onRelease;
                 this.onRelease = null;
                 fire?.();

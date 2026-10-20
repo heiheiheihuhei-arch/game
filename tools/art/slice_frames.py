@@ -16,6 +16,7 @@ ap.add_argument("layout", nargs="?", default="8x3")
 ap.add_argument("--red")
 ap.add_argument("--body-h", type=int, default=150, help="站着时身体（主色部分）的高度，像素")
 ap.add_argument("--body", default="blue", choices=["blue", "red"], help="身体的主色：用来对齐和定缩放")
+ap.add_argument("--clean", action="store_true", help="每格只留大块的连通区域，去掉邻格伸进来的兵器尖、刀光碎片")
 ap.add_argument("--ref-row", type=int, default=1, help="用哪一行（从 0 数）的身体高度定缩放，要选角色都站着的那一行")
 args = ap.parse_args()
 ncol, nrow = map(int, args.layout.split("x"))
@@ -61,6 +62,29 @@ def emptiest(counts, n, lo, hi):
     return cuts + [hi]
 
 
+def components(cx0, cx1, ry0, ry1):
+    """格子里按 2 像素步长找连通块，留下面积不小于最大块 3% 的块，返回这些块覆盖的 (x, y) 集合（步长 2 的格点）"""
+    pts = {(x, y) for y in range(ry0 - ry0 % 2, ry1, 2) for x in range(cx0 - cx0 % 2, cx1, 2) if occ[y][x]}
+    seen, blobs = set(), []
+    for p in pts:
+        if p in seen:
+            continue
+        stack, blob = [p], []
+        seen.add(p)
+        while stack:
+            x, y = stack.pop()
+            blob.append((x, y))
+            for dx in (-2, 0, 2):
+                for dy in (-2, 0, 2):
+                    q = (x + dx, y + dy)
+                    if q in pts and q not in seen:
+                        seen.add(q)
+                        stack.append(q)
+        blobs.append(blob)
+    big = max(len(b) for b in blobs)
+    return {q for b in blobs if len(b) >= big * 0.03 for q in b}
+
+
 rcuts = emptiest([sum(occ[y][::2]) for y in range(H)], nrow, 0, H)
 frames, rows = [], []
 for ry0, ry1 in zip(rcuts, rcuts[1:]):
@@ -72,11 +96,16 @@ for ry0, ry1 in zip(rcuts, rcuts[1:]):
             row.append(None)
             continue
         y0, y1 = ys[0], ys[-1] + 1
-        xs = [x for x in range(cx0, cx1) if any(occ[y][x] for y in range(y0, y1, 2))]
-        x0, x1 = xs[0], xs[-1] + 1
+        keep = None
+        if args.clean:
+            keep = components(cx0, cx1, ry0, ry1)
+            ys = sorted({y for (x, y) in keep})
+            y0, y1 = ys[0], ys[-1] + 2
+        xs = [x for x in range(cx0, cx1) if any(occ[y][x] for y in range(y0, y1, 2))] if keep is None else sorted({x for (x, y) in keep})
+        x0, x1 = xs[0], (xs[-1] + 1 if keep is None else xs[-1] + 2)
         bx = [x for y in range(y0, y1, 2) for x in range(x0, x1, 2) if is_body(*px(x, y))]
         by = [y for y in range(y0, y1, 2) for x in range(x0, x1, 2) if is_body(*px(x, y))]
-        row.append({"x0": x0, "x1": x1, "y0": y0, "y1": y1,
+        row.append({"x0": x0, "x1": x1, "y0": y0, "y1": y1, "keep": keep,
                     "cx": sum(bx) / len(bx) if bx else (x0 + x1) / 2,
                     "bh": (max(by) - min(by)) if by else 0})
     # 这一行的地面线：大多数帧的底边都在地上，取底边的中位数（腾空帧比它高）
@@ -104,6 +133,11 @@ def save(path, f, red):
         for x in range(f["x0"], f["x1"]):
             r, g, b = px(x, y)
             a = alpha_of(r, g, b)
+            if f["keep"] is not None:
+                # 细线（弓弦、枪杆边缘）可能落在格点之间：周围一圈格点有一个在保留块里就算保留
+                ex, ey = x - x % 2, y - y % 2
+                if not any((ex + dx, ey + dy) in f["keep"] for dx in (-2, 0, 2) for dy in (-2, 0, 2)):
+                    a = 0.0
             # 把白从半透明边缘里扣掉
             r, g, b = (int(max(0, min(255, (c - (1 - a) * 255) / max(a, 0.02)))) if a > 0 else 0 for c in (r, g, b))
             if red and is_body(*px(x, y)):

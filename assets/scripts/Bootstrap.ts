@@ -20,8 +20,8 @@ export class Bootstrap extends Component {
         const wide = frame.width / frame.height >= DESIGN_WIDTH / DESIGN_HEIGHT;
         view.setDesignResolutionSize(DESIGN_WIDTH, DESIGN_HEIGHT, wide ? ResolutionPolicy.FIXED_HEIGHT : ResolutionPolicy.FIXED_WIDTH);
         AudioMgr.init(this.node);
-        // Q 版的兵和兵器是出兵时才创建的，图先载好，出场第一帧就有图
-        preloadSprites(['q/map', 'q/qiang_blue', 'q/qiang_red', 'q/spear', 'q/rubble_small', 'q/rubble_big', 'q/tower_blue_broken', 'q/tower_red_broken', 'q/castle_blue_broken', 'q/castle_red_broken',
+        // 兵是出兵时才创建的，动画帧和残破图先载好，出场第一帧就有图
+        preloadSprites(['q/map', 'q/rubble_small', 'q/rubble_big', 'q/tower_blue_broken', 'q/tower_red_broken', 'q/castle_blue_broken', 'q/castle_red_broken',
             ...Object.values(UNITS).flatMap(d => d.anim ? animFrames(d.anim) : [])]);
         this.newGame();
     }
