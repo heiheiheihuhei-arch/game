@@ -34,6 +34,8 @@ export interface UnitDef {
     weapon?: { path: string; h: number };
     /** 逐帧动画：目录下 f_0…f_N（朝右画、地面贴底边），显示高度，各动作用哪几帧 [起, 止) */
     anim?: UnitAnim;
+    /** 敌方单独用的一套逐帧动画（帧数、节奏和我方不同时）；不写就用 anim 的 foe 目录 */
+    animFoe?: UnitAnim;
 }
 
 export interface UnitAnim {
@@ -70,6 +72,8 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 112, dmg: 15, cd: 1.15, range: 190, speed: 58,
         vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 8, cost: 21, radius: 15,
+        // 敌方弓兵试用 AI 动画工具生成的红衣将军（只有攻击 12 帧，站立、走路、受击、阵亡暂时都用第 1 帧）
+        animFoe: { me: 'q/u3_gong_red', foe: 'q/u3_gong_red', h: 50, idle: 0, draw: [0, 4], after: [4, 12], drawTime: 0.4, afterTime: 0.7, hurt: [0, 1], death: [0, 1], walk: [0, 1], walkFps: 1 },
         anim: { me: 'q/u2_gong_blue', foe: 'q/u2_gong_red', h: 46, idle: 0, draw: [0, 6], after: [6, 8], drawTime: 0.42, afterTime: 0.3, hurt: [8, 10], death: [12, 15], walk: [16, 24], walkFps: 10 },
     },
     qi: {

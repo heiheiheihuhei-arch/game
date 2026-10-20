@@ -22,7 +22,7 @@ export class Bootstrap extends Component {
         AudioMgr.init(this.node);
         // 兵是出兵时才创建的，动画帧和残破图先载好，出场第一帧就有图
         preloadSprites(['q/map', 'q/rubble_small', 'q/rubble_big', 'q/tower_blue_broken', 'q/tower_red_broken', 'q/castle_blue_broken', 'q/castle_red_broken',
-            ...Object.values(UNITS).flatMap(d => d.anim ? animFrames(d.anim) : [])]);
+            ...Object.values(UNITS).flatMap(d => [d.anim, d.animFoe].flatMap(a => a ? animFrames(a) : []))]);
         this.newGame();
     }
 

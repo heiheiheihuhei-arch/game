@@ -91,8 +91,9 @@ export class Unit {
             this.spear.getComponent(UITransform)!.setAnchorPoint(0.5, 0.3);
         }
         if (def.anim) {
-            this.animDir = side === 1 ? def.anim.me : def.anim.foe;
-            const n = createSprite('Anim', this.body, `${this.animDir}/f_0`, { height: def.anim.h, anchorY: 0 });
+            const a = this.animDef!;
+            this.animDir = side === 1 ? a.me : a.foe;
+            const n = createSprite('Anim', this.body, `${this.animDir}/f_0`, { height: a.h, anchorY: 0 });
             n.setPosition(0, -def.radius * 0.9);
             this.anim = n.getComponent(Sprite);
             this.anim!.trim = false;
@@ -114,6 +115,8 @@ export class Unit {
 
     get alive() { return this.hp > 0; }
     get radius() { return this.def.radius; }
+    /** 这个兵用的逐帧动画：敌方有单独的一套就用它 */
+    get animDef() { return this.side === -1 && this.def.animFoe ? this.def.animFoe : this.def.anim; }
 
     hurt(d: number) { this.hp -= d; this.flash = 0.1; this.hurtT = HURT_TIME; }
 
@@ -129,7 +132,7 @@ export class Unit {
     /** 播阵亡动画，播完返回 false */
     updateDeath(dt: number): boolean {
         this.deathT += dt;
-        const a = this.def.anim!, k = Math.min(1, this.deathT / DEATH_TIME);
+        const a = this.animDef!, k = Math.min(1, this.deathT / DEATH_TIME);
         this.setFrame(a.death[0] + Math.min(a.death[1] - a.death[0] - 1, Math.floor(k * (a.death[1] - a.death[0]))));
         this.anim!.color = Color.WHITE;
         this.body.setScale(1, 1);
@@ -150,7 +153,7 @@ export class Unit {
 
     /** 逐帧动画选帧：出手 > 受击 > 走路 > 站着。图不翻转：敌我两边各有一套朝向对的图 */
     private updateAnim(dt: number, walking: boolean) {
-        const a = this.def.anim!;
+        const a = this.animDef!;
         if (this.hurtT > 0) this.hurtT -= dt;
         const pick = ([from, to]: [number, number], k: number) => from + Math.min(to - from - 1, Math.floor(k * (to - from)));
         let f = a.idle;
@@ -202,7 +205,7 @@ export class Unit {
         if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
             // 逐帧动画的图比字高，血条放到图的头顶上
-            const top = this.def.anim ? this.def.anim.h * 0.8 - this.def.radius * 0.9 : this.def.radius + 10;
+            const top = this.animDef ? this.animDef.h * 0.8 - this.def.radius * 0.9 : this.def.radius + 10;
             if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, top);
         }
     }
@@ -214,12 +217,12 @@ export class Unit {
         let pull = 0, arrow = false;
         if (this.drawT >= 0) {
             this.drawT += dt;
-            const drawTime = this.def.anim?.drawTime ?? DRAW_TIME;
+            const drawTime = this.animDef?.drawTime ?? DRAW_TIME;
             pull = Math.min(1, this.drawT / drawTime);
             arrow = true;
             if (this.drawT >= drawTime) {
                 this.drawT = -1;
-                this.twangT = this.def.anim?.afterTime ?? TWANG_TIME;
+                this.twangT = this.animDef?.afterTime ?? TWANG_TIME;
                 const fire = this.onRelease;
                 this.onRelease = null;
                 fire?.();
