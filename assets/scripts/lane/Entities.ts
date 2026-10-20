@@ -21,8 +21,7 @@ const DRAW_TIME = 0.42;
 const TWANG_TIME = 0.18;
 const BOW = new Color(110, 70, 36, 255);
 const STRING = new Color(240, 235, 220, 255);
-/** 逐帧动画：受击、阵亡各播多久；阵亡最后这一段慢慢变透明 */
-const HURT_TIME = 0.2;
+/** 逐帧动画：阵亡播多久，最后这一段慢慢变透明；闲置、胜利的播放速度 */
 const IDLE_FPS = 6;
 const WIN_TIME = 1.2;
 const DEATH_FADE = 0.4;
@@ -72,7 +71,6 @@ export class Unit {
     private readonly anim: Sprite | null = null;
     private animDir = '';
     private shownFrame = '';
-    private hurtT = 0;
     private deathT = -1;
     private winT = -1;
     private idleT = Math.random() * 10;
@@ -122,7 +120,8 @@ export class Unit {
     /** 这个兵用的逐帧动画：敌方有单独的一套就用它 */
     get animDef() { return this.side === -1 && this.def.animFoe ? this.def.animFoe : this.def.anim; }
 
-    hurt(d: number) { this.hp -= d; this.flash = 0.1; this.hurtT = HURT_TIME; }
+    /** 被打中：不播受击动作，只闪一下红 */
+    hurt(d: number) { this.hp -= d; this.flash = 0.1; }
 
     /** 有阵亡动画的兵死后留在原地播完再删；返回 false 表示没有动画，可以直接删 */
     startDeath(): boolean {
@@ -158,10 +157,9 @@ export class Unit {
     /** 一局赢了：播欢呼，播完停在最后一帧 */
     celebrate() { if (this.winT < 0) this.winT = Math.random() * 0.3; }
 
-    /** 逐帧动画选帧：胜利 > 出手 > 受击 > 走路 > 站着。图不翻转：敌我两边各有一套朝向对的图 */
+    /** 逐帧动画选帧：胜利 > 出手 > 走路 > 站着（被打中不换帧，只闪红）。图不翻转：敌我两边各有一套朝向对的图 */
     private updateAnim(dt: number, walking: boolean) {
         const a = this.animDef!;
-        if (this.hurtT > 0) this.hurtT -= dt;
         const pick = ([from, to]: [number, number], k: number) => from + Math.min(to - from - 1, Math.floor(k * (to - from)));
         this.idleT += dt;
         let f = a.idle[0] + Math.floor(this.idleT * IDLE_FPS) % (a.idle[1] - a.idle[0]);
@@ -175,11 +173,9 @@ export class Unit {
             f = pick(a.draw, this.drawT / a.drawTime);
         } else if (this.twangT > 0) {
             f = pick(a.after, 1 - this.twangT / a.afterTime);
-        } else if (this.hurtT > 0) {
-            f = pick(a.hurt, 1 - this.hurtT / HURT_TIME);
         }
         // 走路：播走路循环帧（walkT 每秒涨 10）
-        if (walking && this.drawT < 0 && this.twangT <= 0 && this.hurtT <= 0) f = a.walk[0] + Math.floor(this.walkT / 10 * a.walkFps) % (a.walk[1] - a.walk[0]);
+        if (walking && this.drawT < 0 && this.twangT <= 0) f = a.walk[0] + Math.floor(this.walkT / 10 * a.walkFps) % (a.walk[1] - a.walk[0]);
         this.setFrame(f);
         this.anim!.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
     }

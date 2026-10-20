@@ -1,8 +1,8 @@
 """第二套兵种（统一画风的初级小兵）：把 Seedance 生成的各动作视频切成游戏用的帧组，并打印 Defs.ts 里要填的动画配置。
-每个兵种的动作按 [闲置, 跑步, 攻击, 受击, 阵亡, 胜利] 依次排进同一个目录 assets/art/q/<前缀><兵种>_<阵营>/f_N.png。
+每个兵种的动作按 [闲置, 跑步, 攻击, 阵亡, 胜利] 依次排进同一个目录 assets/art/q/<前缀><兵种>_<阵营>/f_N.png。
 - 闲置、跑步：在视频里找首尾最接近的一段，做成无缝循环
 - 攻击：截一次完整动作；收招回不到起始姿势的（枪兵）用「刺出 + 倒放收回」
-- 受击：攻击/闲置之外没单独生成，用阵亡开头被打中往后一仰的几帧
+- 受击不做动作，游戏里只闪红
 - 阵亡：从开始倒下截到躺稳；胜利：整段
 各段按头部和脚底对齐、统一缩放（用 build_video_unit.py 里的抠图和对齐）
 用法：python3 tools/art/build_units2.py [兵种...]
@@ -18,7 +18,7 @@ import build_video_unit as bvu  # noqa: E402
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 VID = ROOT / "art" / "raw" / "video2"
 OUT = ROOT / "assets" / "art" / "q"
-PREFIX = "u5_"
+PREFIX = "u6_"
 HEIGHT = 160
 
 
@@ -122,7 +122,6 @@ def build_unit(unit, side="blue"):
     d0 = first_move(v(c["die"]), c.get("die_from", {}).get(side, 0))
     d1 = settle(v(c["die"]), d0)
     die = take(v(c["die"]), max(0, d0 - 2), d1, 12)
-    add("hurt", die[:3])
     add("death", die)
     add("win", take(v(c["win"]), 0, len(gray(v(c["win"]))) - 1, 12))
     out = OUT / f"{PREFIX}{unit}_{side}"
