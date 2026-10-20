@@ -55,6 +55,8 @@ export class Battle {
     /** 建筑被拆的时刻：废墟还要冒一会儿烟 */
     private readonly razedAt = new Map<Building, number>();
     private floats: Float[] = [];
+    /** 正在播阵亡动画的兵：已经不算在战场上，播完再删 */
+    private corpses: Unit[] = [];
     private readonly projG: Graphics;
     /** 广播给界面的战报，比如某座塔被拆 */
     onNotice: (text: string, side: Side) => void = () => { };
@@ -176,6 +178,7 @@ export class Battle {
         for (const b of this.buildings) this.updateBuilding(b, dt);
         this.updateProjs(dt);
         this.reap();
+        this.corpses = this.corpses.filter(c => c.updateDeath(dt) || (c.node.destroy(), false));
 
         const myBase = this.base(1), foeBase = this.base(-1);
         if (!foeBase.alive) this.winner = 1;
@@ -417,7 +420,8 @@ export class Battle {
             this.fx.emit(u.x, u.y + 6, 8, { color: C.blood, speed: 140, size: 3, life: 0.4, lift: -200 });
             this.fx.emit(u.x, u.y, 4, { color: C.dust, speed: 50, size: 6, life: 0.6, lift: 30 });
             if (by === 1) this.floatText(u.x, u.y + 26, `+${u.def.bounty}`, C.gold, 18);
-            u.node.destroy();
+            if (u.startDeath()) this.corpses.push(u);
+            else u.node.destroy();
             this.units.splice(i, 1);
         }
     }
@@ -443,6 +447,7 @@ export class Battle {
 
     dispose() {
         for (const u of this.units) u.node.destroy();
+        for (const c of this.corpses) c.node.destroy();
         for (const b of this.buildings) b.node.destroy();
         for (const f of this.floats) f.label.node.destroy();
         this.projG.node.destroy();

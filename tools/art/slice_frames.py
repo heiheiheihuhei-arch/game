@@ -1,0 +1,126 @@
+"""把一整张网格序列帧（如 8 列 × 3 行）切成单帧，给按帧播放的动画用。
+和 slice_sheet.py 不同：每一行算一条地面线，帧在这一行里离地多高原样保留（蹦跳腾空的帧就是悬空的），
+横向按角色身体（主色像素）的重心对齐，免得播放时左右抖。
+用法：python3 tools/art/slice_frames.py 设定图.png 输出目录 [列x行] [--red 输出红色版的目录]
+输出 f_0.png … f_N.png，所有帧画布一样大，地面贴画布底边（游戏里锚点用底边中点）。
+--red：把身体的蓝色换成红色另存一套（蓝绿红三个通道对调）（敌方用），手、弓、箭袋这些不是蓝色的地方不变
+"""
+import argparse
+import pathlib
+import subprocess
+
+ap = argparse.ArgumentParser()
+ap.add_argument("src")
+ap.add_argument("out")
+ap.add_argument("layout", nargs="?", default="8x3")
+ap.add_argument("--red")
+ap.add_argument("--body-h", type=int, default=150, help="站着时身体（主色部分）的高度，像素")
+args = ap.parse_args()
+ncol, nrow = map(int, args.layout.split("x"))
+
+probe = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=width,height", "-of", "csv=p=0", args.src],
+                       capture_output=True, text=True, check=True).stdout.strip().split(",")
+W, H = int(probe[0]), int(probe[1])
+rgb = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", args.src, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                     capture_output=True, check=True).stdout
+
+
+def px(x, y):
+    i = (y * W + x) * 3
+    return rgb[i], rgb[i + 1], rgb[i + 2]
+
+
+def alpha_of(r, g, b):
+    # 地上的影子（浅灰、颜色很淡）也当背景扣掉，游戏里影子另画
+    if min(r, g, b) > 150 and max(r, g, b) - min(r, g, b) < 45:
+        return 0.0
+    # 白底 → 透明：越接近白越透明
+    a = ((255 - r) + (255 - g) + (255 - b)) * 3 / 255
+    return max(0.0, min(1.0, (a - 0.2) / 0.8))
+
+
+def is_body(r, g, b):
+    return b > 120 and b > r + 50 and b > g + 10
+
+
+TH = 0.25
+occ = [[alpha_of(*px(x, y)) > TH for x in range(W)] for y in range(H)]
+R = 12
+
+
+def emptiest(counts, n, lo, hi):
+    sm = [sum(counts[max(0, i - R):i + R + 1]) for i in range(len(counts))]
+    size, cuts = hi - lo, [lo]
+    for i in range(1, n):
+        c, span = lo + size * i // n, int(size / n * 0.35)
+        cuts.append(min(range(c - span, c + span), key=lambda x: sm[x]))
+    return cuts + [hi]
+
+
+rcuts = emptiest([sum(occ[y][::2]) for y in range(H)], nrow, 0, H)
+frames, rows = [], []
+for ry0, ry1 in zip(rcuts, rcuts[1:]):
+    ccuts = emptiest([sum(occ[y][x] for y in range(ry0, ry1, 2)) for x in range(W)], ncol, 0, W)
+    row = []
+    for cx0, cx1 in zip(ccuts, ccuts[1:]):
+        ys = [y for y in range(ry0, ry1) if any(occ[y][x] for x in range(cx0, cx1, 2))]
+        if not ys:
+            row.append(None)
+            continue
+        y0, y1 = ys[0], ys[-1] + 1
+        xs = [x for x in range(cx0, cx1) if any(occ[y][x] for y in range(y0, y1, 2))]
+        x0, x1 = xs[0], xs[-1] + 1
+        bx = [x for y in range(y0, y1, 2) for x in range(x0, x1, 2) if is_body(*px(x, y))]
+        by = [y for y in range(y0, y1, 2) for x in range(x0, x1, 2) if is_body(*px(x, y))]
+        row.append({"x0": x0, "x1": x1, "y0": y0, "y1": y1,
+                    "cx": sum(bx) / len(bx) if bx else (x0 + x1) / 2,
+                    "bh": (max(by) - min(by)) if by else 0})
+    # 这一行的地面线：大多数帧的底边都在地上，取底边的中位数（腾空帧比它高）
+    bottoms = sorted(f["y1"] for f in row if f)
+    ground = bottoms[len(bottoms) // 2]
+    for f in row:
+        if f:
+            f["ground"] = max(ground, f["y1"])
+    rows.append(row)
+    frames += row
+
+real = [f for f in frames if f]
+# 用第 2 行（射箭，都是站着的）身体高度的中位数定缩放
+ref = sorted(f["bh"] for f in rows[min(1, nrow - 1)] if f and f["bh"])
+scale = args.body_h / ref[len(ref) // 2]
+half = max(max(f["cx"] - f["x0"], f["x1"] - f["cx"]) for f in real) * scale
+cw = int(half * 2) + 8
+ch = int(max(f["ground"] - f["y0"] for f in real) * scale) + 8
+
+
+def save(path, f, red):
+    w, h = f["x1"] - f["x0"], f["y1"] - f["y0"]
+    out = bytearray()
+    for y in range(f["y0"], f["y1"]):
+        for x in range(f["x0"], f["x1"]):
+            r, g, b = px(x, y)
+            a = alpha_of(r, g, b)
+            # 把白从半透明边缘里扣掉
+            r, g, b = (int(max(0, min(255, (c - (1 - a) * 255) / max(a, 0.02)))) if a > 0 else 0 for c in (r, g, b))
+            if red and is_body(*px(x, y)):
+                r, g, b = b, int(g * 0.4), int(r * 0.8)
+            out += bytes((r, g, b, int(a * 255)))
+    sw, sh = max(1, round(w * scale)), max(1, round(h * scale))
+    ox = round(cw / 2 - (f["cx"] - f["x0"]) * scale)
+    oy = ch - 4 - round((f["ground"] - f["y0"]) * scale)
+    vf = f"scale={sw}:{sh},pad={cw}:{ch}:{ox}:{max(0, oy)}:color=0x00000000"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{w}x{h}",
+                    "-i", "-", "-vf", vf, str(path)], input=bytes(out), check=True)
+
+
+def blank(path):
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", f"color=black@0:s={cw}x{ch},format=rgba",
+                    "-frames:v", "1", str(path)], check=True)
+
+
+for d, red in [(args.out, False)] + ([(args.red, True)] if args.red else []):
+    d = pathlib.Path(d)
+    d.mkdir(parents=True, exist_ok=True)
+    for i, f in enumerate(frames):
+        (save(d / f"f_{i}.png", f, red) if f else blank(d / f"f_{i}.png"))
+print(f"{len(frames)} 帧（空 {len(frames) - len(real)}）→ {args.out}，画布 {cw}x{ch}")

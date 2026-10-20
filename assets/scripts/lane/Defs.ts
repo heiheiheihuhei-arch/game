@@ -32,6 +32,26 @@ export interface UnitDef {
     img?: { me: string; foe: string; h: number };
     /** 手里的兵器图（竖着画、刃朝上）和显示高度 */
     weapon?: { path: string; h: number };
+    /** 逐帧动画：目录下 f_0…f_N（朝右画、地面贴底边），显示高度，各动作用哪几帧 [起, 止) */
+    anim?: UnitAnim;
+}
+
+export interface UnitAnim {
+    me: string;
+    foe: string;
+    h: number;
+    walk: [number, number];
+    /** 射箭：前一段是取箭拉弦，release 这一帧放箭，后面是放完收手 */
+    shoot: [number, number];
+    release: number;
+    hurt: [number, number];
+    death: [number, number];
+}
+
+/** 某个兵种动画的全部帧路径，开局预加载用 */
+export function animFrames(a: UnitAnim): string[] {
+    const n = Math.max(a.walk[1], a.shoot[1], a.hurt[1], a.death[1]);
+    return [a.me, a.foe].flatMap(dir => Array.from({ length: n }, (_, i) => `${dir}/f_${i}`));
 }
 
 export const UNITS: Record<UnitKind, UnitDef> = {
@@ -43,6 +63,7 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 112, dmg: 15, cd: 1.15, range: 190, speed: 58,
         vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 8, cost: 21, radius: 15,
+        anim: { me: 'q/gong_blue', foe: 'q/gong_red', h: 62, walk: [0, 8], shoot: [8, 16], release: 13, hurt: [16, 18], death: [18, 24] },
     },
     qi: {
         kind: 'qi', glyph: '骑', name: '骑兵', hp: 255, dmg: 22, cd: 1.1, range: 38, speed: 105,

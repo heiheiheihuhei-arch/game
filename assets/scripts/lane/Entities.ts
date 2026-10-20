@@ -1,6 +1,6 @@
 import { Color, Graphics, Label, Node, Sprite, UITransform } from 'cc';
 import { createGraphics, createLabel, createNode } from '../core/Nodes';
-import { createSprite } from '../core/Res';
+import { createSprite, readySprite } from '../core/Res';
 import { BuildingDef, DAMAGE_SMOKE, SIDE_COLOR, UnitDef } from './Defs';
 
 export type Side = 1 | -1;
@@ -21,6 +21,11 @@ const DRAW_TIME = 0.42;
 const TWANG_TIME = 0.18;
 const BOW = new Color(110, 70, 36, 255);
 const STRING = new Color(240, 235, 220, 255);
+/** 逐帧动画：走路每秒几帧；放箭后收手、受击、阵亡各播多久 */
+const WALK_FPS = 12;
+const AFTER_SHOT_TIME = 0.3;
+const HURT_TIME = 0.2;
+export const DEATH_TIME = 0.9;
 
 function drawBar(g: Graphics, side: Side, p: number, w: number, y: number) {
     g.clear();
@@ -62,12 +67,19 @@ export class Unit {
     private twangT = 0;
     private bowDir: number;
     private onRelease: (() => void) | null = null;
+    /** 逐帧动画的兵：整张图一帧一帧换，代码只管选哪一帧 */
+    private readonly anim: Sprite | null = null;
+    private animDir = '';
+    private shownFrame = '';
+    private hurtT = 0;
+    private deathT = -1;
+    private readonly shadow: Graphics;
 
     constructor(parent: Node, readonly def: UnitDef, readonly side: Side, readonly lane: number, public s: number,
         readonly lat: number, readonly dmgMul: number, hpMul: number) {
         this.maxHp = this.hp = Math.round(def.hp * hpMul);
         this.node = createNode(def.name, parent);
-        const shadow = createGraphics('Shadow', this.node);
+        const shadow = this.shadow = createGraphics('Shadow', this.node);
         shadow.fillColor = new Color(20, 14, 10, 60);
         shadow.ellipse(0, -def.radius * 0.9, def.radius * 0.9, def.radius * 0.3);
         shadow.fill();
@@ -79,7 +91,13 @@ export class Unit {
             this.spear = createSprite('Weapon', this.body, def.weapon.path, { height: def.weapon.h });
             this.spear.getComponent(UITransform)!.setAnchorPoint(0.5, 0.3);
         }
-        if (def.img) {
+        if (def.anim) {
+            this.animDir = side === 1 ? def.anim.me : def.anim.foe;
+            const n = createSprite('Anim', this.body, `${this.animDir}/f_0`, { height: def.anim.h, anchorY: 0 });
+            n.setPosition(0, -def.radius * 0.9);
+            this.anim = n.getComponent(Sprite);
+            this.anim!.trim = false;
+        } else if (def.img) {
             const n = createSprite('Glyph', this.body, side === 1 ? def.img.me : def.img.foe, { height: def.img.h });
             this.glyphImg = n.getComponent(Sprite);
         } else {
@@ -91,14 +109,67 @@ export class Unit {
             this.glyph.shadowColor = new Color(20, 14, 10, 150);
         }
         // 弓拿在字的前面
-        this.bow = def.kind === 'gong' ? createGraphics('Bow', this.body) : null;
+        this.bow = def.kind === 'gong' && !def.anim ? createGraphics('Bow', this.body) : null;
         this.bar = createGraphics('Hp', this.node);
     }
 
     get alive() { return this.hp > 0; }
     get radius() { return this.def.radius; }
 
-    hurt(d: number) { this.hp -= d; this.flash = 0.1; }
+    hurt(d: number) { this.hp -= d; this.flash = 0.1; this.hurtT = HURT_TIME; }
+
+    /** 有阵亡动画的兵死后留在原地播完再删；返回 false 表示没有动画，可以直接删 */
+    startDeath(): boolean {
+        if (!this.anim) return false;
+        this.deathT = 0;
+        this.bar.clear();
+        return true;
+    }
+
+    /** 播阵亡动画，播完返回 false */
+    updateDeath(dt: number): boolean {
+        this.deathT += dt;
+        const a = this.def.anim!, k = Math.min(1, this.deathT / DEATH_TIME);
+        this.setFrame(a.death[0] + Math.min(a.death[1] - a.death[0] - 1, Math.floor(k * (a.death[1] - a.death[0]))));
+        this.anim!.color = Color.WHITE;
+        this.body.setScale(1, 1);
+        this.body.angle = 0;
+        this.shadow.node.setScale(1 - k, 1 - k);
+        return this.deathT < DEATH_TIME;
+    }
+
+    private setFrame(i: number) {
+        const path = `${this.animDir}/f_${i}`;
+        if (path === this.shownFrame) return;
+        const sf = readySprite(path);
+        if (!sf) return;
+        this.shownFrame = path;
+        this.anim!.spriteFrame = sf;
+    }
+
+    /** 逐帧动画选帧：射箭 > 受击 > 走路 > 站着；图是朝右画的，往左打就左右翻过来 */
+    private updateAnim(dt: number, walking: boolean) {
+        const a = this.def.anim!;
+        if (this.hurtT > 0) this.hurtT -= dt;
+        let f: number, dir = this.side as number;
+        if (this.drawT >= 0) {
+            f = a.shoot[0] + Math.min(a.release - a.shoot[0] - 1, Math.floor(this.drawT / DRAW_TIME * (a.release - a.shoot[0])));
+            dir = this.bowDir;
+        } else if (this.twangT > 0) {
+            const k = 1 - this.twangT / AFTER_SHOT_TIME;
+            f = a.release + Math.min(a.shoot[1] - a.release - 1, Math.floor(k * (a.shoot[1] - a.release)));
+            dir = this.bowDir;
+        } else if (this.hurtT > 0) {
+            f = a.hurt[0] + Math.min(a.hurt[1] - a.hurt[0] - 1, Math.floor((1 - this.hurtT / HURT_TIME) * (a.hurt[1] - a.hurt[0])));
+        } else if (walking) {
+            f = a.walk[0] + Math.floor(this.walkT / 10 * WALK_FPS) % (a.walk[1] - a.walk[0]);
+        } else {
+            f = a.shoot[0];
+        }
+        this.setFrame(f);
+        this.anim!.node.setScale(dir, 1);
+        this.anim!.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
+    }
 
     /** 弓兵出手：搭箭、拉满弦，拉满那一刻调用 release 放箭 */
     drawBow(towardX: number, release: () => void) {
@@ -119,28 +190,31 @@ export class Unit {
         if (this.lunge > 0) this.lunge = Math.max(0, this.lunge - dt * 5);
         if (this.flash > 0) this.flash -= dt;
         this.node.setPosition(this.x, this.y);
-        // 走路：一颠一颠、左右轻晃
-        const hop = walking ? Math.abs(Math.sin(this.walkT)) * 5 : 0;
-        const sway = walking ? Math.sin(this.walkT) * 5 : 0;
+        // 走路：一颠一颠、左右轻晃；逐帧动画的兵自己会蹦，不用代码颠
+        const hop = walking && !this.anim ? Math.abs(Math.sin(this.walkT)) * 5 : 0;
+        const sway = walking && !this.anim ? Math.sin(this.walkT) * 5 : 0;
         const ext = this.updateSpear(dt);
         this.updateBow(dt);
+        if (this.anim) this.updateAnim(dt, walking);
         this.body.setPosition(this.lungeDir * Math.sin(this.lunge * Math.PI) * (this.spear ? 4 : 10), hop);
         // 刺枪时字往前探
         this.body.angle = sway - this.lungeDir * ext * 10;
-        const sq = this.flash > 0 ? 1.12 : 1;
+        const sq = this.flash > 0 && !this.anim ? 1.12 : 1;
         this.body.setScale(sq, 2 - sq);
         if (this.glyph) this.glyph.color = this.flash > 0 ? HURT : SIDE_COLOR[this.side].rim;
         if (this.glyphImg) this.glyphImg.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
         if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
-            if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, this.def.radius + 10);
+            // 逐帧动画的图比字高，血条放到图的头顶上
+            const top = this.def.anim ? this.def.anim.h * 0.8 - this.def.radius * 0.9 : this.def.radius + 10;
+            if (this.hp < this.maxHp) drawBar(this.bar, this.side, this.hp / this.maxHp, this.def.radius * 2.2, top);
         }
     }
 
     /** 画弓：平时松弦；出手时搭箭往后拉满，放箭后弦弹回抖几下 */
     private updateBow(dt: number) {
         const g = this.bow;
-        if (!g || !this.alive) return;
+        if ((!g && !this.anim) || !this.alive) return;
         let pull = 0, arrow = false;
         if (this.drawT >= 0) {
             this.drawT += dt;
@@ -148,7 +222,7 @@ export class Unit {
             arrow = true;
             if (this.drawT >= DRAW_TIME) {
                 this.drawT = -1;
-                this.twangT = TWANG_TIME;
+                this.twangT = this.anim ? AFTER_SHOT_TIME : TWANG_TIME;
                 const fire = this.onRelease;
                 this.onRelease = null;
                 fire?.();
@@ -158,6 +232,7 @@ export class Unit {
             // 松手后弦往前多弹一点再来回抖
             pull = -Math.sin((1 - this.twangT / TWANG_TIME) * Math.PI * 3) * 0.25 * (this.twangT / TWANG_TIME);
         }
+        if (!g) return;
         const d = this.bowDir, r = this.def.radius;
         const bx = d * r * 0.95, h = r * 1.15, w = r * 0.45, y = 2;
         g.clear();
