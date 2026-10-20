@@ -16,6 +16,7 @@ ap.add_argument("layout", nargs="?", default="8x3")
 ap.add_argument("--red")
 ap.add_argument("--body-h", type=int, default=150, help="站着时身体（主色部分）的高度，像素")
 ap.add_argument("--body", default="blue", choices=["blue", "red"], help="身体的主色：用来对齐和定缩放")
+ap.add_argument("--align-top", action="store_true", help="横向按上半身（身体主色在上半部分的重心）对齐：跑步时腿前后甩，按全身重心对齐上身会晃")
 ap.add_argument("--clean", action="store_true", help="每格只留大块的连通区域，去掉邻格伸进来的兵器尖、刀光碎片")
 ap.add_argument("--ref-row", type=int, default=1, help="用哪一行（从 0 数）的身体高度定缩放，要选角色都站着的那一行")
 args = ap.parse_args()
@@ -103,7 +104,8 @@ for ry0, ry1 in zip(rcuts, rcuts[1:]):
             y0, y1 = ys[0], ys[-1] + 2
         xs = [x for x in range(cx0, cx1) if any(occ[y][x] for y in range(y0, y1, 2))] if keep is None else sorted({x for (x, y) in keep})
         x0, x1 = xs[0], (xs[-1] + 1 if keep is None else xs[-1] + 2)
-        bx = [x for y in range(y0, y1, 2) for x in range(x0, x1, 2) if is_body(*px(x, y))]
+        ytop = (y0 + y1) // 2 if args.align_top else y1
+        bx = [x for y in range(y0, ytop, 2) for x in range(x0, x1, 2) if is_body(*px(x, y))]
         by = [y for y in range(y0, y1, 2) for x in range(x0, x1, 2) if is_body(*px(x, y))]
         row.append({"x0": x0, "x1": x1, "y0": y0, "y1": y1, "keep": keep,
                     "cx": sum(bx) / len(bx) if bx else (x0 + x1) / 2,
