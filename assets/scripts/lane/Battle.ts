@@ -1,7 +1,7 @@
 import { Color, Graphics, Label, Node } from 'cc';
 import { createGraphics, createLabel } from '../core/Nodes';
 import {
-    BARRACKS_UPGRADE, BUILDINGS, DAMAGE_FIRE, DAMAGE_SMOKE, GUARD, INCOME, INCOME_GROWTH, AI, MATCH_TIME, REINFORCE_CD, REINFORCE_SIZE, SPAWN_EVERY, SQUAD_BASE, START_GOLD,
+    BARRACKS_UPGRADE, BUILDINGS, GUARD, INCOME, INCOME_GROWTH, AI, MATCH_TIME, REINFORCE_CD, REINFORCE_SIZE, SPAWN_EVERY, SQUAD_BASE, START_GOLD,
     TECH_STEP, TECHS, TechKey, UNITS, UnitKind,
 } from './Defs';
 import { Building, Side, Unit } from './Entities';
@@ -55,8 +55,6 @@ export class Battle {
     /** 胜方：1 我方，-1 敌方，0 平局；null 表示还在打 */
     winner: Side | 0 | null = null;
     private projs: Proj[] = [];
-    /** 建筑被拆的时刻：废墟还要冒一会儿烟 */
-    private readonly razedAt = new Map<Building, number>();
     private floats: Float[] = [];
     /** 正在播阵亡动画的兵：已经不算在战场上，播完再删 */
     private corpses: Unit[] = [];
@@ -350,7 +348,6 @@ export class Battle {
 
     private updateBuilding(b: Building, dt: number) {
         b.sync(dt);
-        this.burnFx(b, dt);
         if (!b.attacks) return;
         if (b.cdT > 0) { b.cdT -= dt; return; }
         const atk = b.def.attack!;
@@ -364,26 +361,7 @@ export class Battle {
         b.cdT = atk.cd;
         const t = best;
         // 有射箭动画的塔：拉弓到一半才放箭，箭从塔上的弓兵那里飞出去
-        b.fire(() => { if (t.alive) this.shoot(b.side, b.x, b.y + (b.animated ? b.height * 0.75 : b.radius), t, atk.dmg, false); });
-    }
-
-    /** 残血的建筑冒烟、着火；拆掉后废墟再冒几秒烟 */
-    private burnFx(b: Building, dt: number) {
-        // 逐帧动画的建筑：烟火和倒塌都画在动画里了
-        if (b.animated) return;
-        const spread = b.radius * 0.8, jx = () => b.x + (Math.random() - 0.5) * 2 * spread;
-        if (!b.alive) {
-            const since = this.time - (this.razedAt.get(b) ?? -99);
-            if (since < 5 && Math.random() < dt * 6) this.fx.emit(jx(), b.y, 1, { color: C.smoke, speed: 20, size: 9, grow: 8, life: 1.4, lift: 50 });
-            return;
-        }
-        const top = b.y + b.height * 0.55;
-        if (b.ratio < DAMAGE_SMOKE && Math.random() < dt * 8) {
-            this.fx.emit(jx(), top, 1, { color: C.smoke, speed: 20, size: 9, grow: 9, life: 1.5, lift: 55 });
-        }
-        if (b.ratio < DAMAGE_FIRE && Math.random() < dt * 22) {
-            this.fx.emit(jx(), top - b.height * 0.2 * Math.random(), 1, { color: C.fire, speed: 30, size: 7, grow: -7, life: 0.55, lift: 110 });
-        }
+        b.fire(() => { if (t.alive) this.shoot(b.side, b.x, b.y + b.height * 0.75, t, atk.dmg, false); });
     }
 
     private updateProjs(dt: number) {
@@ -436,7 +414,6 @@ export class Battle {
     }
 
     private razed(b: Building, by: Side) {
-        this.razedAt.set(b, this.time);
         this.sides[by].gold += b.def.bounty;
         this.fx.emit(b.x, b.y + 20, 40, { color: C.fire, speed: 260, size: 7, life: 0.6, drag: 3 });
         this.fx.emit(b.x, b.y + 20, 24, { color: C.smoke, speed: 90, size: 14, life: 1.4, lift: 50, jitter: 20 });

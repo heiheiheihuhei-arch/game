@@ -108,21 +108,12 @@ export interface BuildingDef {
     /** 会射箭的建筑：伤害、间隔、射程；兵营不攻击 */
     attack?: { dmg: number; cd: number; range: number };
     bounty: number;
-    /** 建筑图：我方、敌方的完好图和残破图（血量低于一半多换残破图，没有就压暗），被拆后的废墟地基图；显示宽或高 */
+    /** 建筑动画（闲置、射箭、倒塌） */
     img: BuildingArt;
 }
 
 export interface BuildingArt {
-    me: string;
-    foe: string;
-    meBroken?: string;
-    foeBroken?: string;
-    rubble: string;
-    w?: number;
-    h?: number;
-    rubbleW: number;
-    /** 逐帧动画的建筑：有了就不用上面的静态图 */
-    anim?: BuildingAnim;
+    anim: BuildingAnim;
 }
 
 /** 建筑逐帧动画（tools/art/build_buildings.py 生成）：三种血量各一段闲置循环、会射箭的三种血量各一段攻击、一段倒塌（停在最后一帧的废墟） */
@@ -146,23 +137,23 @@ export const DAMAGE_FIRE = 0.3;
 export const BUILDINGS = {
     tower: {
         name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40,
-        img: { me: 'q/tower_blue', foe: 'q/tower_red', meBroken: 'q/tower_blue_broken', foeBroken: 'q/tower_red_broken', rubble: 'q/rubble_small', h: 80, rubbleW: 64,
+        img: {
             anim: { me: 'q/b1_tower_blue', foe: 'q/b1_tower_red', foot: 64, meBox: { canvasW: 160, canvasH: 160, footW: 102, footBottom: 12, footCx: 82 }, foeBox: { canvasW: 160, canvasH: 160, footW: 112, footBottom: 4, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], attack: [[24, 32], [32, 40], [40, 48]], death: [48, 60] } },
     } as BuildingDef,
     barracks: {
         name: '兵营', glyph: '营', hp: 2200, bounty: 60,
-        img: { me: 'q/tent_blue', foe: 'q/tent_red', rubble: 'q/rubble_small', h: 96, rubbleW: 90,
+        img: {
             anim: { me: 'q/b1_barracks_blue', foe: 'q/b1_barracks_red', foot: 112, meBox: { canvasW: 167, canvasH: 160, footW: 132, footBottom: 20, footCx: 85 }, foeBox: { canvasW: 166, canvasH: 160, footW: 132, footBottom: 15, footCx: 82 }, idle: [[0, 8], [8, 16], [16, 24]], death: [24, 36] } },
     } as BuildingDef,
     /** 大本营门前的两座门牙塔：比路上的塔更硬、打得更疼 */
     gate: {
         name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60,
-        img: { me: 'q/tower_blue', foe: 'q/tower_red', meBroken: 'q/tower_blue_broken', foeBroken: 'q/tower_red_broken', rubble: 'q/rubble_small', h: 94, rubbleW: 74,
+        img: {
             anim: { me: 'q/b1_tower_blue', foe: 'q/b1_tower_red', foot: 74, meBox: { canvasW: 160, canvasH: 160, footW: 102, footBottom: 12, footCx: 82 }, foeBox: { canvasW: 160, canvasH: 160, footW: 112, footBottom: 4, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], attack: [[24, 32], [32, 40], [40, 48]], death: [48, 60] } },
     } as BuildingDef,
     base: {
         name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0,
-        img: { me: 'q/castle_blue', foe: 'q/castle_red', meBroken: 'q/castle_blue_broken', foeBroken: 'q/castle_red_broken', rubble: 'q/rubble_big', w: 250, rubbleW: 220,
+        img: {
             anim: { me: 'q/b1_base_blue', foe: 'q/b1_base_red', foot: 200, meBox: { canvasW: 167, canvasH: 160, footW: 135, footBottom: 10, footCx: 85 }, foeBox: { canvasW: 160, canvasH: 160, footW: 129, footBottom: 17, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], death: [24, 36] } },
     } as BuildingDef,
 };
