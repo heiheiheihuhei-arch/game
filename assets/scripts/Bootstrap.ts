@@ -1,4 +1,5 @@
-import { _decorator, Component, ResolutionPolicy, view } from 'cc';
+import { _decorator, Color, Component, ResolutionPolicy, view } from 'cc';
+import { createLabel } from './core/Nodes';
 import { AudioMgr } from './core/AudioMgr';
 import { preloadSprites } from './core/Res';
 import { animFrames, UNITS } from './lane/Defs';
@@ -20,10 +21,11 @@ export class Bootstrap extends Component {
         const wide = frame.width / frame.height >= DESIGN_WIDTH / DESIGN_HEIGHT;
         view.setDesignResolutionSize(DESIGN_WIDTH, DESIGN_HEIGHT, wide ? ResolutionPolicy.FIXED_HEIGHT : ResolutionPolicy.FIXED_WIDTH);
         AudioMgr.init(this.node);
-        // 兵是出兵时才创建的，动画帧和残破图先载好，出场第一帧就有图
+        // 兵是出兵时才创建的：动画帧和残破图全部载好再开局，不然网慢时兵出来是隐身的
+        const loading = createLabel('Loading', this.node, '加载中…', 36, new Color(250, 236, 200, 255));
         preloadSprites(['q/map', 'q/rubble_small', 'q/rubble_big', 'q/tower_blue_broken', 'q/tower_red_broken', 'q/castle_blue_broken', 'q/castle_red_broken',
-            ...Object.values(UNITS).flatMap(d => [d.anim, d.animFoe].flatMap(a => a ? animFrames(a) : []))]);
-        this.newGame();
+            ...Object.values(UNITS).flatMap(d => [d.anim, d.animFoe].flatMap(a => a ? animFrames(a) : []))])
+            .then(() => { loading.node.destroy(); this.newGame(); });
     }
 
     private newGame() {
