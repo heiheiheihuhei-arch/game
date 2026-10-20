@@ -133,10 +133,14 @@ def build(segments, out_dir, flip, height):
 TOOL = RAW / "tool-framesprite"
 VID = RAW / "video"
 JOBS = {
-    # 敌方弓兵（红衣将军）：攻击 12 帧（AI 动画工具）+ 走路 12 帧（Seedance 1.0-pro-fast，第 33 帧起 23 帧的循环，隔一帧取）
+    # 敌方弓兵（红衣将军）：攻击 0-11（AI 动画工具）、走路 12-23（Seedance 1.0-pro-fast，第 33 帧起 23 帧的循环，隔一帧取）、受击 24-27、阵亡 28-39
     "gong_red": lambda: build([
         (rgba_frames_from_pngs(sorted((TOOL / "gong_red_attack").glob("frame_*.png"))), 0),
         (rgba_frames_from_video(VID / "gong_red_walk1" / "video.mp4", 33, 23, 2), 0),
+        # 受击 4 帧：被打中后头往后仰（视频 0.8~1.2 秒；前面 AI 自己加了一团火，不要）
+        (rgba_frames_from_video(VID / "gong_red_hurt1" / "video.mp4", 19, 10, 3), 0),
+        # 阵亡 12 帧：弓掉落、往后仰面倒地、躺平（视频 1.25~2.2 秒）
+        (rgba_frames_from_video(VID / "gong_red_die1" / "video.mp4", 30, 24, 2), 0),
     ], ROOT / "assets" / "art" / "q" / "u4_gong_red", flip=True, height=220),
 }
 
