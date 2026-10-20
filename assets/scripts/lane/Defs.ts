@@ -40,17 +40,18 @@ export interface UnitAnim {
     me: string;
     foe: string;
     h: number;
-    walk: [number, number];
-    /** 射箭：前一段是取箭拉弦，release 这一帧放箭，后面是放完收手 */
-    shoot: [number, number];
-    release: number;
+    /** 站着、走路用的那一帧：走路不出帧，用代码让它蹦（AI 画的走路帧前后接不上，播起来卡） */
+    idle: number;
+    /** 射箭：draw 是取箭、搭箭、拉满弦，播完那一刻放箭；after 是放完箭收手 */
+    draw: [number, number];
+    after: [number, number];
     hurt: [number, number];
     death: [number, number];
 }
 
 /** 某个兵种动画的全部帧路径，开局预加载用 */
 export function animFrames(a: UnitAnim): string[] {
-    const n = Math.max(a.walk[1], a.shoot[1], a.hurt[1], a.death[1]);
+    const n = Math.max(a.draw[1], a.after[1], a.hurt[1], a.death[1]);
     return [a.me, a.foe].flatMap(dir => Array.from({ length: n }, (_, i) => `${dir}/f_${i}`));
 }
 
@@ -63,7 +64,7 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 112, dmg: 15, cd: 1.15, range: 190, speed: 58,
         vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 8, cost: 21, radius: 15,
-        anim: { me: 'q/gong_blue', foe: 'q/gong_red', h: 62, walk: [0, 8], shoot: [8, 16], release: 13, hurt: [16, 18], death: [18, 24] },
+        anim: { me: 'q/gong_a_blue', foe: 'q/gong_a_red', h: 62, idle: 0, draw: [0, 6], after: [7, 8], hurt: [8, 10], death: [10, 16] },
     },
     qi: {
         kind: 'qi', glyph: '骑', name: '骑兵', hp: 255, dmg: 22, cd: 1.1, range: 38, speed: 105,

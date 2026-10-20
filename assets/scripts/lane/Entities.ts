@@ -21,9 +21,10 @@ const DRAW_TIME = 0.42;
 const TWANG_TIME = 0.18;
 const BOW = new Color(110, 70, 36, 255);
 const STRING = new Color(240, 235, 220, 255);
-/** 逐帧动画：走路每秒几帧；放箭后收手、受击、阵亡各播多久 */
-const WALK_FPS = 12;
+/** 逐帧动画：放箭后收手、受击、阵亡各播多久；走路时每秒蹦几下、蹦多高 */
 const AFTER_SHOT_TIME = 0.3;
+const HOPS_PER_SEC = 1.6;
+const HOP_H = 12;
 const HURT_TIME = 0.2;
 export const DEATH_TIME = 0.9;
 
@@ -147,27 +148,38 @@ export class Unit {
         this.anim!.spriteFrame = sf;
     }
 
-    /** 逐帧动画选帧：射箭 > 受击 > 走路 > 站着；图是朝右画的，往左打就左右翻过来 */
+    /** 逐帧动画选帧：射箭 > 受击 > 站着；图是朝右画的，往左打就左右翻过来。走路用站姿帧，代码让它蹦 */
     private updateAnim(dt: number, walking: boolean) {
         const a = this.def.anim!;
         if (this.hurtT > 0) this.hurtT -= dt;
-        let f: number, dir = this.side as number;
+        const pick = ([from, to]: [number, number], k: number) => from + Math.min(to - from - 1, Math.floor(k * (to - from)));
+        let f = a.idle, dir = this.side as number;
         if (this.drawT >= 0) {
-            f = a.shoot[0] + Math.min(a.release - a.shoot[0] - 1, Math.floor(this.drawT / DRAW_TIME * (a.release - a.shoot[0])));
+            f = pick(a.draw, this.drawT / DRAW_TIME);
             dir = this.bowDir;
         } else if (this.twangT > 0) {
-            const k = 1 - this.twangT / AFTER_SHOT_TIME;
-            f = a.release + Math.min(a.shoot[1] - a.release - 1, Math.floor(k * (a.shoot[1] - a.release)));
+            f = pick(a.after, 1 - this.twangT / AFTER_SHOT_TIME);
             dir = this.bowDir;
         } else if (this.hurtT > 0) {
-            f = a.hurt[0] + Math.min(a.hurt[1] - a.hurt[0] - 1, Math.floor((1 - this.hurtT / HURT_TIME) * (a.hurt[1] - a.hurt[0])));
-        } else if (walking) {
-            f = a.walk[0] + Math.floor(this.walkT / 10 * WALK_FPS) % (a.walk[1] - a.walk[0]);
-        } else {
-            f = a.shoot[0];
+            f = pick(a.hurt, 1 - this.hurtT / HURT_TIME);
+        }
+        // 蹦跳：前 75% 在空中（正弦弧线，起跳时略拉长），后 25% 落地压扁再弹回
+        let air = 0, sx = 1, sy = 1;
+        if (walking && f === a.idle) {
+            const p = (this.walkT / 10 * HOPS_PER_SEC) % 1;
+            if (p < 0.75) {
+                air = Math.sin(p / 0.75 * Math.PI) * HOP_H;
+                const st = Math.max(0, 1 - p / 0.2) * 0.08;
+                sx = 1 - st; sy = 1 + st;
+            } else {
+                const k = Math.sin((p - 0.75) / 0.25 * Math.PI);
+                sx = 1 + 0.16 * k; sy = 1 - 0.2 * k;
+            }
         }
         this.setFrame(f);
-        this.anim!.node.setScale(dir, 1);
+        this.anim!.node.setScale(dir * sx, sy);
+        this.anim!.node.setPosition(0, -this.def.radius * 0.9 + air);
+        this.shadow.node.setScale(1 - air / HOP_H * 0.3, 1 - air / HOP_H * 0.3);
         this.anim!.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
     }
 
