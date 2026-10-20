@@ -1,0 +1,89 @@
+<!doctype html>
+<html><body>
+<script>
+// 合成整张地图背景：草地打底，路肩压暗一圈，三条路和两个大本营广场铺土路，边缘羽化
+const load = s => new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = s; });
+(async () => {
+  const L = await (await fetch('lanes.json')).json();
+  const [grass, dirt] = await Promise.all([load('grass.jpg'), load('dirt.jpg')]);
+  const W = L.W, H = L.H;
+  const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return [c, c.getContext('2d')]; };
+  // 世界坐标（原点在地图中心、y 朝上）→ 画布坐标
+  const X = x => x + W / 2, Y = y => H / 2 - y;
+  const shape = (g, extra) => {
+    g.lineCap = g.lineJoin = 'round';
+    g.lineWidth = L.road + extra;
+    for (const pts of L.lanes) {
+      g.beginPath();
+      pts.forEach(([x, y], i) => i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y)));
+      g.stroke();
+    }
+    for (const s of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(X(s * L.baseX), Y(0), L.plaza[0] + extra / 2, L.plaza[1] + extra / 2, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+  };
+  const [out, o] = mk();
+  o.fillStyle = o.createPattern(grass, 'repeat');
+  o.fillRect(0, 0, W, H);
+  // 固定种子的随机数：每次生成的地图一样
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const blob = (g, x, y, r, color) => {
+    const gr = g.createRadialGradient(x, y, 0, x, y, r);
+    gr.addColorStop(0, color); gr.addColorStop(1, color.replace(/[\d.]+\)$/, '0)'));
+    g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r, r * (0.6 + rnd() * 0.4), rnd() * 3, 0, Math.PI * 2); g.fill();
+  };
+  // 草地大块深浅变化：深绿草丛和枯黄草片，打破平铺的重复感
+  for (let i = 0; i < 140; i++) blob(o, rnd() * W, rnd() * H, 70 + rnd() * 180, rnd() < 0.55 ? 'rgba(30,70,20,0.22)' : 'rgba(205,190,95,0.20)');
+  // 中间交战区：草被踩秃，露出一片片泥土（越靠地图中线越多）
+  const [trample, tr] = mk();
+  for (let i = 0; i < 150; i++) {
+    const x = W / 2 + (rnd() - 0.5) * (rnd() < 0.7 ? 1600 : 2600), y = rnd() * H;
+    blob(tr, x, y, 50 + rnd() * 120, 'rgba(255,255,255,0.9)');
+  }
+  const [mud, mu] = mk();
+  mu.fillStyle = mu.createPattern(dirt, 'repeat');
+  mu.fillRect(0, 0, W, H);
+  mu.globalCompositeOperation = 'destination-in';
+  mu.drawImage(trample, 0, 0);
+  o.globalAlpha = 0.85;
+  o.drawImage(mud, 0, 0);
+  o.globalAlpha = 1;
+  // 路肩：比路宽一圈的暗色，柔和过渡到草地
+  const [edge, e] = mk();
+  e.strokeStyle = e.fillStyle = 'rgba(70, 48, 18, 0.45)';
+  shape(e, 26);
+  o.filter = 'blur(10px)';
+  o.drawImage(edge, 0, 0);
+  o.filter = 'none';
+  // 土路：先画出路形状的遮罩并羽化，再用它裁出土路贴图
+  const [mask, m] = mk();
+  m.strokeStyle = m.fillStyle = '#fff';
+  shape(m, 0);
+  const [road, r] = mk();
+  r.fillStyle = r.createPattern(dirt, 'repeat');
+  r.fillRect(0, 0, W, H);
+  r.globalCompositeOperation = 'destination-in';
+  r.filter = 'blur(4px)';
+  r.drawImage(mask, 0, 0);
+  r.filter = 'none';
+  o.drawImage(road, 0, 0);
+  // 路中间稍微提亮一点，像被踩实的路心
+  const [mid, md] = mk();
+  md.strokeStyle = md.fillStyle = 'rgba(255, 240, 200, 0.18)';
+  shape(md, -L.road * 0.45);
+  o.filter = 'blur(14px)';
+  o.drawImage(mid, 0, 0);
+  o.filter = 'none';
+  // 土路上的深色车辙、踩痕，交战区更多
+  for (let i = 0; i < 70; i++) blob(o, W / 2 + (rnd() - 0.5) * 2400, rnd() * H, 30 + rnd() * 70, 'rgba(90,60,25,0.22)');
+  // 四周稍微压暗，视线集中在中间
+  const vg = o.createRadialGradient(W / 2, H / 2, H * 0.6, W / 2, H / 2, W * 0.62);
+  vg.addColorStop(0, 'rgba(20,30,10,0)'); vg.addColorStop(1, 'rgba(20,30,10,0.35)');
+  o.fillStyle = vg; o.fillRect(0, 0, W, H);
+  window.out = out.toDataURL('image/jpeg', 0.86);
+})();
+</script>
+</body></html>

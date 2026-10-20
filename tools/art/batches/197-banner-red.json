@@ -1,0 +1,14 @@
+{
+  "note": "红方军旗",
+  "jobs": [
+    {
+      "id": "banner_red",
+      "count": 1,
+      "size": "2048x2048",
+      "refs": [
+        "art/raw/196-battlefield/banner_1.png"
+      ],
+      "prompt": "编辑这张图：把旗帜的蓝色换成红色，深浅和质感不变，其他都保持原图完全不变，纯白背景，无水印"
+    }
+  ]
+}

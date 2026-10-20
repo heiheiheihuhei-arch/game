@@ -121,12 +121,13 @@ if __name__ == "__main__":
     ap.add_argument("--corner", type=float, default=0.09)
     ap.add_argument("--size", type=int, default=512)
     ap.add_argument("--crop", type=float, default=0.68)
+    ap.add_argument("--lighten", type=float, default=0.5, help="地面和纸色混合调淡的比例；Q 版彩色地面用 0")
     a = ap.parse_args()
     if a.kind == "prop":
         prop(a.src, a.dst, a.width, a.height, a.corner)
     elif a.kind == "glow":
         glow(a.src, a.dst, a.width, a.height)
     elif a.kind == "ground":
-        ground(a.src, a.dst, a.size, a.crop)
+        ground(a.src, a.dst, a.size, a.crop, a.lighten)
     else:
         patch(a.src, a.dst, a.size, a.crop)

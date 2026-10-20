@@ -4,6 +4,7 @@ import { AudioMgr } from './core/AudioMgr';
 import { preloadSprites } from './core/Res';
 import { animFrames, BUILDINGS, buildingFrames, UNITS } from './lane/Defs';
 import { Game } from './lane/Game';
+import { sceneryAssets } from './lane/Scenery';
 
 const { ccclass } = _decorator;
 
@@ -25,7 +26,8 @@ export class Bootstrap extends Component {
         const loading = createLabel('Loading', this.node, '加载中…', 36, new Color(250, 236, 200, 255));
         preloadSprites(['q/map', 'q/rubble_small', 'q/rubble_big', 'q/tower_blue_broken', 'q/tower_red_broken', 'q/castle_blue_broken', 'q/castle_red_broken',
             ...Object.values(UNITS).flatMap(d => [d.anim, d.animFoe].flatMap(a => a ? animFrames(a) : [])),
-            ...Object.values(BUILDINGS).flatMap(d => d.img.anim ? buildingFrames(d.img.anim) : [])])
+            ...Object.values(BUILDINGS).flatMap(d => d.img.anim ? buildingFrames(d.img.anim) : []),
+            ...sceneryAssets()])
             .then(() => { loading.node.destroy(); this.newGame(); });
     }
 

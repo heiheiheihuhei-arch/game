@@ -5,6 +5,7 @@ import { Battle } from './Battle';
 import { CameraCtl, Minimap } from './Camera';
 import { GUARD, MATCH_TIME, REINFORCE_SIZE, TECHS, UNIT_ORDER, UNITS } from './Defs';
 import { BASE_X, drawMap, LANE_NAMES } from './MapDef';
+import { Scenery } from './Scenery';
 import { Particles } from './Particles';
 import { Hud, PanelModel } from './Ui';
 
@@ -15,6 +16,7 @@ const DRAG_SLOP = 10;
 export class Game {
     readonly root: Node;
     private readonly actors: Node;
+    private readonly scenery: Scenery;
     private readonly battle: Battle;
     private readonly ai: Ai;
     private readonly cam: CameraCtl;
@@ -29,10 +31,14 @@ export class Game {
     constructor(parent: Node, onRestart: () => void) {
         this.root = createNode('Game', parent);
         const world = createNode('World', this.root);
-        drawMap(createNode('Map', world));
+        const map = createNode('Map', world);
+        drawMap(map);
+        const ground = createNode('Ground', world);
         this.actors = createNode('Actors', world);
         const overlay = createNode('Overlay', world);
         this.fx = new Particles(world);
+        const sky = createNode('Sky', world);
+        this.scenery = new Scenery(ground, this.actors, sky);
         const texts = createNode('Texts', world);
         this.battle = new Battle(this.actors, overlay, this.fx, texts);
         this.ai = new Ai(this.battle);
@@ -147,6 +153,7 @@ export class Game {
         const dt = realDt * SPEEDS[this.speedIdx];
         this.battle.update(dt);
         this.ai.update(dt);
+        this.scenery.update(realDt);
         this.sortActors();
         this.minimap.update(realDt);
         const me = this.battle.base(1), foe = this.battle.base(-1);

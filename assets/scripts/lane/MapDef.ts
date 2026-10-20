@@ -94,12 +94,5 @@ export const GATE_TOWERS: [number, number][] = [[118, 74], [118, -74]];
 export function drawMap(parent: Node) {
     // 草地和土路是离线合成好的一整张图（tools/art/mapgen.html 按 LANES、ROAD_W、PLAZA 画的），改了路线要重新生成
     createSprite('Ground', parent, 'q/map', { width: WORLD_W, height: WORLD_H });
-    // 路与路之间的空地放树、石头、花丛，地图上下边也点缀几棵；左右大致对称
-    const decor: [string, number, number, number][] = [
-        ['q/tree_a', -640, 110, 80], ['q/rock', -330, 140, 40], ['q/bush', -60, 120, 40], ['q/tree_b', 260, 110, 76], ['q/rock', 560, 140, 38], ['q/tree_a', 820, 110, 78],
-        ['q/tree_b', -700, -210, 76], ['q/bush', -420, -170, 40], ['q/tree_a', -120, -210, 80], ['q/rock', 220, -170, 40], ['q/bush', 480, -170, 38], ['q/tree_b', 740, -210, 76],
-        ['q/tree_a', -900, 390, 64], ['q/bush', -380, 400, 34], ['q/tree_b', 160, 390, 60], ['q/rock', 640, 400, 32], ['q/tree_a', 1100, 390, 62],
-        ['q/tree_b', -1000, -450, 60], ['q/rock', -460, -440, 32], ['q/tree_a', 60, -450, 64], ['q/bush', 560, -440, 34], ['q/tree_b', 980, -450, 60],
-    ];
-    for (const [path, x, y, h] of decor) createSprite('Decor', parent, path, { height: h, anchorY: 0 }).setPosition(x, y);
+    // 树、石头、营地、战场痕迹和会动的东西在 Scenery.ts
 }
