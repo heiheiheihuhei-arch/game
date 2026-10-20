@@ -43,6 +43,9 @@ const C = {
     stone: new Color(70, 64, 58, 255),
 };
 
+/** 被挡住时最多往路的一侧挪多远（路宽 150，兵出生时左右散开 ±50） */
+const SIDESTEP_MAX = 62;
+
 export class Battle {
     readonly sides: Record<number, SideState> = { 1: new SideState(), [-1]: new SideState() };
     units: Unit[] = [];
@@ -249,8 +252,17 @@ export class Battle {
         let walking = false;
         if (best) {
             if (u.cdT <= 0) { u.cdT = u.def.cd; this.attack(u, best); }
-        } else if (!this.blocked(u)) {
-            u.s += side * u.def.speed * dt;
+        } else {
+            const blocker = this.blocked(u);
+            if (!blocker) {
+                u.s += side * u.def.speed * dt;
+            } else {
+                // 前面自己人在打：往旁边挪，绕到它身边一起上（到了路边就往另一边挪）
+                let dir = Math.sign(u.lat - blocker.lat) || (Math.random() < 0.5 ? -1 : 1);
+                if (Math.abs(u.lat + dir * 4) > SIDESTEP_MAX) dir = -dir;
+                u.lat = Math.max(-SIDESTEP_MAX, Math.min(SIDESTEP_MAX, u.lat + dir * u.def.speed * 0.8 * dt));
+                u.s += side * u.def.speed * 0.25 * dt;
+            }
             walking = true;
         }
         [u.x, u.y] = lanePoint(u.lane, u.s, u.lat);
@@ -288,15 +300,15 @@ export class Battle {
         u.sync(dt, walking);
     }
 
-    /** 近战兵前面有自己的近战兵正在肉搏，就排队等着；远程兵、投石车站在后面放箭砸石，不挡路 */
-    private blocked(u: Unit) {
-        if (u.def.range > 60) return false;
+    /** 近战兵正前方（同一条线上）有自己的近战兵正在肉搏，返回挡路的那个；并排的不算挡。远程兵、投石车站在后面放箭砸石，不挡路 */
+    private blocked(u: Unit): Unit | null {
+        if (u.def.range > 60) return null;
         for (const a of this.units) {
             if (a === u || a.side !== u.side || a.lane !== u.lane || !a.alive || !a.target || a.def.range > 60) continue;
             const fd = (a.s - u.s) * u.side;
-            if (fd > 0 && fd < u.radius + a.radius + 4) return true;
+            if (fd > 0 && fd < u.radius + a.radius + 4 && Math.abs(a.lat - u.lat) < u.radius + a.radius) return a;
         }
-        return false;
+        return null;
     }
 
     private dmgOf(u: Unit, t: Unit | Building) {

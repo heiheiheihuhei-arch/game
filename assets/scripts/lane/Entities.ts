@@ -77,7 +77,7 @@ export class Unit {
     private readonly shadow: Graphics;
 
     constructor(parent: Node, readonly def: UnitDef, readonly side: Side, readonly lane: number, public s: number,
-        readonly lat: number, readonly dmgMul: number, hpMul: number) {
+        public lat: number, readonly dmgMul: number, hpMul: number) {
         this.maxHp = this.hp = Math.round(def.hp * hpMul);
         this.node = createNode(def.name, parent);
         const shadow = this.shadow = createGraphics('Shadow', this.node);
