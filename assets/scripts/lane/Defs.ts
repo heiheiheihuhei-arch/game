@@ -41,23 +41,23 @@ export interface UnitAnim {
     me: string;
     foe: string;
     h: number;
-    /** 站着、走路用的那一帧：走路不出帧，用代码让它蹦（AI 画的走路帧前后接不上，播起来卡） */
+    /** 站着不动时的那一帧 */
     idle: number;
     /** 出手：draw 是蓄力（弓兵取箭拉弦、枪兵后拉、骑兵举戟），播 drawTime 秒，播完那一刻放箭 / 打中；after 是出手后收招，播 afterTime 秒 */
     draw: [number, number];
     after: [number, number];
     drawTime: number;
     afterTime: number;
-    /** 走路时代码让它颠：每秒几下、多高（骑马的颠得低、快） */
-    hopsPerSec: number;
-    hopH: number;
+    /** 走路循环的帧、每秒播几帧（骑兵的马小跑快一点） */
+    walk: [number, number];
+    walkFps: number;
     hurt: [number, number];
     death: [number, number];
 }
 
 /** 某个兵种动画的全部帧路径，开局预加载用 */
 export function animFrames(a: UnitAnim): string[] {
-    const n = Math.max(a.draw[1], a.after[1], a.hurt[1], a.death[1]);
+    const n = Math.max(a.draw[1], a.after[1], a.hurt[1], a.death[1], a.walk[1]);
     return [a.me, a.foe].flatMap(dir => Array.from({ length: n }, (_, i) => `${dir}/f_${i}`));
 }
 
@@ -65,17 +65,17 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     qiang: {
         kind: 'qiang', glyph: '枪', name: '枪兵', hp: 195, dmg: 16, cd: 1.0, range: 52, speed: 62,
         vs: { qi: 1.8, building: 1 }, bounty: 8, cost: 18, radius: 16,
-        anim: { me: 'q/u_qiang_blue', foe: 'q/u_qiang_red', h: 45, idle: 0, draw: [0, 2], after: [2, 4], drawTime: 0.2, afterTime: 0.28, hurt: [4, 6], death: [6, 11], hopsPerSec: 2.2, hopH: 6 },
+        anim: { me: 'q/u2_qiang_blue', foe: 'q/u2_qiang_red', h: 45, idle: 0, draw: [0, 2], after: [2, 4], drawTime: 0.2, afterTime: 0.28, hurt: [4, 6], death: [6, 11], walk: [12, 20], walkFps: 10 },
     },
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 112, dmg: 15, cd: 1.15, range: 190, speed: 58,
         vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 8, cost: 21, radius: 15,
-        anim: { me: 'q/u_gong_blue', foe: 'q/u_gong_red', h: 46, idle: 0, draw: [0, 6], after: [6, 8], drawTime: 0.42, afterTime: 0.3, hurt: [8, 10], death: [12, 15], hopsPerSec: 2.2, hopH: 6 },
+        anim: { me: 'q/u2_gong_blue', foe: 'q/u2_gong_red', h: 46, idle: 0, draw: [0, 6], after: [6, 8], drawTime: 0.42, afterTime: 0.3, hurt: [8, 10], death: [12, 15], walk: [16, 24], walkFps: 10 },
     },
     qi: {
         kind: 'qi', glyph: '骑', name: '骑兵', hp: 255, dmg: 22, cd: 1.1, range: 38, speed: 105,
         vs: { gong: 1.9, building: 0.9 }, bounty: 12, cost: 33, locked: true, radius: 18,
-        anim: { me: 'q/u_qi_blue', foe: 'q/u_qi_red', h: 63, idle: 0, draw: [0, 2], after: [2, 4], drawTime: 0.28, afterTime: 0.32, hurt: [4, 6], death: [8, 10], hopsPerSec: 3, hopH: 3 },
+        anim: { me: 'q/u2_qi_blue', foe: 'q/u2_qi_red', h: 63, idle: 0, draw: [0, 2], after: [2, 4], drawTime: 0.28, afterTime: 0.32, hurt: [4, 6], death: [8, 10], walk: [12, 20], walkFps: 12 },
     },
     che: {
         kind: 'che', glyph: '车', name: '投石车', hp: 240, dmg: 69, cd: 3.2, range: 280, speed: 40,

@@ -148,7 +148,7 @@ export class Unit {
         this.anim!.spriteFrame = sf;
     }
 
-    /** 逐帧动画选帧：射箭 > 受击 > 站着；走路用站姿帧，代码让它蹦。图不翻转：翻了字就反了，敌我两边各画了朝向对的一套 */
+    /** 逐帧动画选帧：出手 > 受击 > 走路 > 站着。图不翻转：敌我两边各有一套朝向对的图 */
     private updateAnim(dt: number, walking: boolean) {
         const a = this.def.anim!;
         if (this.hurtT > 0) this.hurtT -= dt;
@@ -161,23 +161,9 @@ export class Unit {
         } else if (this.hurtT > 0) {
             f = pick(a.hurt, 1 - this.hurtT / HURT_TIME);
         }
-        // 蹦跳：前 75% 在空中（正弦弧线，起跳时略拉长），后 25% 落地压扁再弹回
-        let air = 0, sx = 1, sy = 1;
-        if (walking && f === a.idle) {
-            const p = (this.walkT / 10 * a.hopsPerSec) % 1;
-            if (p < 0.75) {
-                air = Math.sin(p / 0.75 * Math.PI) * a.hopH;
-                const st = Math.max(0, 1 - p / 0.2) * 0.08;
-                sx = 1 - st; sy = 1 + st;
-            } else {
-                const k = Math.sin((p - 0.75) / 0.25 * Math.PI);
-                sx = 1 + 0.16 * k; sy = 1 - 0.2 * k;
-            }
-        }
+        // 走路：播走路循环帧（walkT 每秒涨 10）
+        if (walking && f === a.idle) f = a.walk[0] + Math.floor(this.walkT / 10 * a.walkFps) % (a.walk[1] - a.walk[0]);
         this.setFrame(f);
-        this.anim!.node.setScale(sx, sy);
-        this.anim!.node.setPosition(0, -this.def.radius * 0.9 + air);
-        this.shadow.node.setScale(1 - air / a.hopH * 0.3, 1 - air / a.hopH * 0.3);
         this.anim!.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
     }
 
