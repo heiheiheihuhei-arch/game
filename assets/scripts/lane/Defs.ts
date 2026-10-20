@@ -37,6 +37,7 @@ export interface UnitDef {
 }
 
 export interface UnitAnim {
+    /** 我方的图朝右画，敌方的图朝左画（字不能翻转，所以两边各画一套，播放时不翻转） */
     me: string;
     foe: string;
     h: number;
@@ -64,7 +65,7 @@ export const UNITS: Record<UnitKind, UnitDef> = {
     gong: {
         kind: 'gong', glyph: '弓', name: '弓兵', hp: 112, dmg: 15, cd: 1.15, range: 190, speed: 58,
         vs: { qiang: 1.7, building: 0.8 }, shot: 'arrow', bounty: 8, cost: 21, radius: 15,
-        anim: { me: 'q/gong_a_blue', foe: 'q/gong_a_red', h: 62, idle: 0, draw: [0, 6], after: [7, 8], hurt: [8, 10], death: [10, 16] },
+        anim: { me: 'q/gong_a_blue', foe: 'q/gong_b_red', h: 62, idle: 0, draw: [0, 6], after: [7, 8], hurt: [8, 10], death: [10, 16] },
     },
     qi: {
         kind: 'qi', glyph: '骑', name: '骑兵', hp: 255, dmg: 22, cd: 1.1, range: 38, speed: 105,

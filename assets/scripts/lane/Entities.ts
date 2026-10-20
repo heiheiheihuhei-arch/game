@@ -148,18 +148,16 @@ export class Unit {
         this.anim!.spriteFrame = sf;
     }
 
-    /** 逐帧动画选帧：射箭 > 受击 > 站着；图是朝右画的，往左打就左右翻过来。走路用站姿帧，代码让它蹦 */
+    /** 逐帧动画选帧：射箭 > 受击 > 站着；走路用站姿帧，代码让它蹦。图不翻转：翻了字就反了，敌我两边各画了朝向对的一套 */
     private updateAnim(dt: number, walking: boolean) {
         const a = this.def.anim!;
         if (this.hurtT > 0) this.hurtT -= dt;
         const pick = ([from, to]: [number, number], k: number) => from + Math.min(to - from - 1, Math.floor(k * (to - from)));
-        let f = a.idle, dir = this.side as number;
+        let f = a.idle;
         if (this.drawT >= 0) {
             f = pick(a.draw, this.drawT / DRAW_TIME);
-            dir = this.bowDir;
         } else if (this.twangT > 0) {
             f = pick(a.after, 1 - this.twangT / AFTER_SHOT_TIME);
-            dir = this.bowDir;
         } else if (this.hurtT > 0) {
             f = pick(a.hurt, 1 - this.hurtT / HURT_TIME);
         }
@@ -177,7 +175,7 @@ export class Unit {
             }
         }
         this.setFrame(f);
-        this.anim!.node.setScale(dir * sx, sy);
+        this.anim!.node.setScale(sx, sy);
         this.anim!.node.setPosition(0, -this.def.radius * 0.9 + air);
         this.shadow.node.setScale(1 - air / HOP_H * 0.3, 1 - air / HOP_H * 0.3);
         this.anim!.color = this.flash > 0 ? HURT_TINT : Color.WHITE;

@@ -15,6 +15,8 @@ ap.add_argument("out")
 ap.add_argument("layout", nargs="?", default="8x3")
 ap.add_argument("--red")
 ap.add_argument("--body-h", type=int, default=150, help="站着时身体（主色部分）的高度，像素")
+ap.add_argument("--body", default="blue", choices=["blue", "red"], help="身体的主色：用来对齐和定缩放")
+ap.add_argument("--ref-row", type=int, default=1, help="用哪一行（从 0 数）的身体高度定缩放，要选角色都站着的那一行")
 args = ap.parse_args()
 ncol, nrow = map(int, args.layout.split("x"))
 
@@ -40,6 +42,8 @@ def alpha_of(r, g, b):
 
 
 def is_body(r, g, b):
+    if args.body == "red":
+        return r > 150 and r > g + 90 and r > b + 60
     return b > 120 and b > r + 50 and b > g + 10
 
 
@@ -85,8 +89,8 @@ for ry0, ry1 in zip(rcuts, rcuts[1:]):
     frames += row
 
 real = [f for f in frames if f]
-# 用第 2 行（射箭，都是站着的）身体高度的中位数定缩放
-ref = sorted(f["bh"] for f in rows[min(1, nrow - 1)] if f and f["bh"])
+# 用 --ref-row 那一行（角色都站着）身体高度的中位数定缩放
+ref = sorted(f["bh"] for f in rows[min(args.ref_row, nrow - 1)] if f and f["bh"])
 scale = args.body_h / ref[len(ref) // 2]
 half = max(max(f["cx"] - f["x0"], f["x1"] - f["cx"]) for f in real) * scale
 cw = int(half * 2) + 8
