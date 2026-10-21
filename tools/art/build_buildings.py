@@ -23,7 +23,8 @@ HEIGHT = 160
 SIZE = bvu.SIZE
 STATES = ("", "_hurt", "_heavy")
 # 每种建筑：视频名前缀、有没有攻击；attack_end 是攻击视频截到第几帧（之后 AI 自己加了火之类的就不要）
-BUILDINGS = {"tower": {"v": "towerA", "attack": True, "attack_end": 72}, "barracks": {"v": "barracks"}, "base": {"v": "base"}}
+# still_ok：健康状态用一张静止图（AI 给静止的塔生成视频时总会让塔长高）
+BUILDINGS = {"tower": {"v": "tower", "still_ok": "art/raw/bpicks_pad/{pre}tower.png"}, "barracks": {"v": "barracks"}, "base": {"v": "base"}}
 
 
 def footprint(rgba):
@@ -131,6 +132,12 @@ def build(name, side):
         cur += len(fr)
 
     for s in STATES:
+        if not s and c.get("still_ok"):
+            img = ROOT / c["still_ok"].format(pre=pre)
+            rgb = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(img), "-vf", f"scale={SIZE}:{SIZE}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                                 capture_output=True, check=True).stdout
+            add("idle_ok", [bvu.key_flood(rgb)])
+            continue
         add(f"idle{s or '_ok'}", seamless(v(f"{c['v']}{s}_idle"), 12))
     if c.get("attack"):
         for s in STATES:
