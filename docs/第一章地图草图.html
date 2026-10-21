@@ -1,71 +1,104 @@
-<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>第一章 黄巾之乱 · 地图草图</title>
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>第一章 黄巾之乱 · 地图布局（第二版）</title>
 <style>
-body{margin:0;background:#faf7f0;color:#222;font:15px/1.6 -apple-system,"PingFang SC",sans-serif}
-main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
-h1{font-size:24px;margin:6px 0 4px}h2{font-size:19px;margin:30px 0 6px;border-left:5px solid #b3541e;padding-left:10px}
-.legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 4px;font-size:13px}.legend span{display:inline-flex;align-items:center;gap:5px}
-.legend i{width:16px;height:12px;display:inline-block;border:1px solid #0003}
-svg{width:100%;height:auto;background:#8fb36a;border-radius:6px;display:block}
-.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px 18px;margin:8px 0;font-size:14px}
-.info b{color:#7a3a10}
-.note{background:#f1ead9;border-left:4px solid #c9a46a;padding:8px 12px;margin:12px 0;font-size:14px}
+body{margin:0;background:#f4efe3;color:#222;font:15px/1.6 -apple-system,"PingFang SC",sans-serif}
+main{max-width:1150px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:24px;margin:6px 0}h2{font-size:19px;margin:30px 0 6px;border-left:5px solid #b3541e;padding-left:10px}
+canvas{width:100%;height:auto;display:block;border-radius:8px;box-shadow:0 2px 10px #0003}
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 18px;margin:8px 0;font-size:14px}.info b{color:#7a3a10}
+.note{background:#ece2cc;border-left:4px solid #c9a46a;padding:8px 12px;margin:12px 0;font-size:14px}
 </style>
 <main>
-<h1>第一章 黄巾之乱 · 五关地图草图</h1>
-<div class="note">这是<b>玩法用的示意图</b>，不是最终美术：色块表示地形，圆点是建筑。AI 画地图时会照这个构图画，路面由我们按数据叠上去。左边是汉军（蓝），右边是黄巾（黄）。</div>
-<div class="legend">
-<span><i style="background:#8fb36a"></i>平原</span><span><i style="background:#d8bd84"></i>土路</span><span><i style="background:#3f7a3a"></i>森林</span>
-<span><i style="background:#c7a573"></i>高地/山坡</span><span><i style="background:#6fa6d8"></i>河流</span><span><i style="background:#8a6a45"></i>桥</span>
-<span><i style="background:#9a9a9a"></i>城墙</span><span><i style="background:#3d6fd6;border-radius:50%"></i>汉军兵营</span><span><i style="background:#e0b020;border-radius:50%"></i>黄巾兵营</span>
-<span><i style="background:#fff;border:2px solid #333"></i>主城/大营</span><span>▲ 箭塔</span><span><i style="background:#c44;border-radius:50%"></i>目标（粮仓等）</span>
-</div>
+<h1>第一章 黄巾之乱 · 地图布局（第二版）</h1>
+<div class="note">不再是三条平行的直路：路顺着地形走，会拐弯、分叉、汇合，路的条数和兵营位置按这场仗来定，两边不对称。这仍是<b>布局示意</b>，最终美术由 AI 照着这个构图来画。蓝 = 汉军，黄 = 黄巾。</div>
 <div id="maps"></div>
 </main>
 <script>
-// 每关：画布 1750×470（游戏里 ×2 = 3500×940），lanes 是折线，zones 是地形块
-const W=1750,H=470;
-const L=[
-{t:"1 · 涿郡募兵（教学）",info:{"类型":"野战 · 拆主城","路":"3 条，平原","汉军":"2 营（上、下路），中路只有塔","黄巾":"3 营","天气":"晴","电脑":"初级","教会":"兵种克制；平原上骑兵很快"},
- zones:[], lanes:[[[110,235],[300,90],[1450,90],[1640,235]],[[110,235],[1640,235]],[[110,235],[300,380],[1450,380],[1640,235]]],
- me:{base:[110,235],camps:[[330,90],[330,380]],towers:[[420,90],[420,235],[420,380]]},
- foe:{base:[1640,235],camps:[[1420,90],[1420,235],[1420,380]],towers:[[1330,90],[1330,235],[1330,380]]}},
-{t:"2 · 长社之战（守城→火攻反击）",info:{"类型":"守 3 分钟 → 烧掉 3 座敌营","路":"3 条汇向城门","汉军":"长社城（有城墙、1 座城门）+ 2 营在城内","黄巾":"5 营，围城，营地外是草木（易燃）","天气":"夜，第 2 分钟起风（向右吹）","电脑":"中级","教会":"守城；火攻顺风蔓延"},
- zones:[{k:"wall",x:200,y:110,w:16,h:250},{k:"forest",x:1050,y:30,w:420,h:110},{k:"forest",x:1050,y:330,w:420,h:110},{k:"forest",x:1200,y:180,w:300,h:110}],
- lanes:[[[110,235],[230,235],[600,110],[1300,85]],[[110,235],[230,235],[1300,235]],[[110,235],[230,235],[600,360],[1300,385]]],
- me:{base:[110,235],camps:[[150,150],[150,320]],towers:[[230,150],[230,320]]},
- foe:{base:null,camps:[[1300,85],[1300,235],[1300,385],[1580,150],[1580,320]],towers:[[1180,85],[1180,385]]},targets:[]},
-{t:"3 · 宛城之战（攻城）",info:{"类型":"攻城 · 拆主城","路":"3 条，中路过河（有桥）","汉军":"4 营","黄巾":"宛城：城墙 + 城门 + 4 座塔；城外 1 营","天气":"晴","电脑":"中级","教会":"攻城门；可用「疑兵」骗敌方选错兵种"},
- zones:[{k:"river",x:760,y:0,w:70,h:470},{k:"bridge",x:745,y:215,w:100,h:40},{k:"wall",x:1420,y:70,w:16,h:330}],
- lanes:[[[110,235],[300,95],[1420,95],[1580,235]],[[110,235],[1580,235]],[[110,235],[300,375],[1420,375],[1580,235]]],
- me:{base:[110,235],camps:[[320,95],[320,235],[320,375],[200,150]],towers:[[420,235]]},
- foe:{base:[1600,235],camps:[[1100,235]],towers:[[1400,110],[1400,360],[1460,180],[1460,290]]}},
-{t:"4 · 广宗之战（先守后攻）",info:{"类型":"前 4 分钟守，之后反攻 · 拆主城","路":"3 条，平原","汉军":"营寨（木栅栏）+ 3 营","黄巾":"4 营（白天出兵快）","天气":"白天 → 第 4 分钟天黑","电脑":"中级 → 天黑后「懈怠」出兵变慢","教会":"先避其锋芒，再夜袭"},
- zones:[{k:"palisade",x:260,y:60,w:12,h:350},{k:"hill",x:1380,y:120,w:300,h:230}],
- lanes:[[[110,235],[300,90],[1450,90],[1620,235]],[[110,235],[1620,235]],[[110,235],[300,380],[1450,380],[1620,235]]],
- me:{base:[110,235],camps:[[220,110],[220,235],[220,360]],towers:[[300,150],[300,320]]},
- foe:{base:[1620,235],camps:[[1300,90],[1300,235],[1300,380],[1500,235]],towers:[[1200,235]]}},
-{t:"5 · 下曲阳之战（章末攻城）",info:{"类型":"攻城 · 拆主城","路":"3 条：上路走山坡（高地）、中路直攻城门、下路过河","汉军":"4 营，解锁投石车","黄巾":"下曲阳：厚城墙 + 城门 + 5 塔；城外高地上 2 营","天气":"晴","电脑":"中级","教会":"投石车攻城；抢高地"},
- zones:[{k:"hill",x:700,y:20,w:520,h:120},{k:"river",x:600,y:330,w:700,h:60},{k:"bridge",x:900,y:325,w:70,h:70},{k:"wall",x:1440,y:60,w:18,h:350}],
- lanes:[[[110,235],[350,80],[1440,80],[1590,235]],[[110,235],[1590,235]],[[110,235],[350,395],[1440,395],[1590,235]]],
- me:{base:[110,235],camps:[[360,80],[360,235],[360,395],[220,320]],towers:[[440,235]]},
- foe:{base:[1610,235],camps:[[900,80],[1100,80]],towers:[[1420,100],[1420,370],[1470,190],[1470,280],[1300,235]]}},
+const W=1800,H=900;
+// 固定种子随机数
+function rng(seed){return()=> (seed=(seed*16807)%2147483647)/2147483647}
+// 平滑闭合不规则形状
+function blob(g,cx,cy,rx,ry,seed,wob=0.25){const r=rng(seed);const n=14,pts=[];for(let i=0;i<n;i++){const a=i/n*Math.PI*2,k=1+(r()-0.5)*wob*2;pts.push([cx+Math.cos(a)*rx*k,cy+Math.sin(a)*ry*k])}
+ g.beginPath();for(let i=0;i<=n;i++){const p=pts[i%n],q=pts[(i+1)%n],m=[(p[0]+q[0])/2,(p[1]+q[1])/2];i?g.quadraticCurveTo(p[0],p[1],m[0],m[1]):g.moveTo(m[0],m[1])}g.closePath()}
+// Catmull-Rom 平滑曲线
+function curve(g,pts){g.beginPath();g.moveTo(...pts[0]);for(let i=0;i<pts.length-1;i++){const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(pts.length-1,i+2)];
+ g.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1])}}
+function grain(g,seed,col,n,sz){const r=rng(seed);g.fillStyle=col;for(let i=0;i<n;i++){g.globalAlpha=0.08+r()*0.12;g.beginPath();g.arc(r()*W,r()*H,sz*(0.4+r()),0,7);g.fill()}g.globalAlpha=1}
+function trees(g,cx,cy,rx,ry,seed,n){const r=rng(seed);for(let i=0;i<n;i++){const a=r()*7,d=Math.sqrt(r());const x=cx+Math.cos(a)*rx*d,y=cy+Math.sin(a)*ry*d,s=12+r()*10;
+ g.fillStyle='#1f4a22';g.beginPath();g.arc(x+3,y+4,s,0,7);g.fill();g.fillStyle=['#2f6b33','#3b7d3a','#2a5f2e'][i%3];g.beginPath();g.arc(x,y,s,0,7);g.fill()}}
+function hill(g,cx,cy,rx,ry,seed){for(let k=0;k<4;k++){blob(g,cx,cy-k*8,rx*(1-k*0.2),ry*(1-k*0.2),seed+k,0.2);g.fillStyle=['#b39864','#c3a872','#d0b680','#dcc48f'][k];g.fill();g.strokeStyle='#8a734880';g.lineWidth=2;g.stroke()}}
+function river(g,pts,w){curve(g,pts);g.strokeStyle='#4f7fae';g.lineWidth=w+10;g.lineCap='round';g.stroke();curve(g,pts);g.strokeStyle='#6fa6d8';g.lineWidth=w;g.stroke();curve(g,pts);g.strokeStyle='#a9d0ef80';g.lineWidth=w*0.3;g.stroke()}
+function road(g,pts){curve(g,pts);g.strokeStyle='#9c7a46';g.lineWidth=44;g.lineCap='round';g.lineJoin='round';g.stroke();curve(g,pts);g.strokeStyle='#d8bd84';g.lineWidth=34;g.stroke();curve(g,pts);g.strokeStyle='#e6d19f90';g.lineWidth=10;g.stroke()}
+function bridge(g,x,y,ang){g.save();g.translate(x,y);g.rotate(ang);g.fillStyle='#6e4f2c';g.fillRect(-40,-24,80,48);g.fillStyle='#93703f';for(let i=-36;i<40;i+=10)g.fillRect(i,-22,7,44);g.restore()}
+function wallRing(g,cx,cy,rx,ry,gates){g.save();g.beginPath();g.ellipse(cx,cy,rx,ry,0,0,7);g.strokeStyle='#5d5a55';g.lineWidth=26;g.stroke();g.strokeStyle='#9a958c';g.lineWidth=18;g.stroke();
+ for(const a of gates){const x=cx+Math.cos(a)*rx,y=cy+Math.sin(a)*ry;g.fillStyle='#6b4a2a';g.fillRect(x-16,y-16,32,32);g.strokeStyle='#222';g.lineWidth=2;g.strokeRect(x-16,y-16,32,32)}g.restore()}
+function palisade(g,pts){curve(g,pts);g.setLineDash([8,6]);g.strokeStyle='#6b4a2a';g.lineWidth=12;g.stroke();g.setLineDash([])}
+function village(g,x,y,seed){const r=rng(seed);for(let i=0;i<6;i++){const hx=x+(r()-0.5)*110,hy=y+(r()-0.5)*70;g.fillStyle='#8c5a3a';g.fillRect(hx-14,hy-10,28,20);g.fillStyle='#b8874f';g.beginPath();g.moveTo(hx-17,hy-10);g.lineTo(hx,hy-22);g.lineTo(hx+17,hy-10);g.fill()}}
+function field(g,x,y,w,h,ang,seed){g.save();g.translate(x,y);g.rotate(ang);g.fillStyle='#b9c46a';g.fillRect(-w/2,-h/2,w,h);g.strokeStyle='#8f9c4a';g.lineWidth=2;for(let i=-w/2;i<w/2;i+=12){g.beginPath();g.moveTo(i,-h/2);g.lineTo(i,h/2);g.stroke()}g.restore()}
+function marsh(g,cx,cy,rx,ry,seed){blob(g,cx,cy,rx,ry,seed,0.3);g.fillStyle='#6f8f6a';g.fill();const r=rng(seed+9);for(let i=0;i<18;i++){g.fillStyle='#5f8fb8a0';blob(g,cx+(r()-0.5)*rx*1.4,cy+(r()-0.5)*ry*1.4,14+r()*18,8+r()*10,seed+i,0.3);g.fill()}}
+function tallgrass(g,cx,cy,rx,ry,seed){blob(g,cx,cy,rx,ry,seed,0.3);g.fillStyle='#a8b45a';g.fill();const r=rng(seed);g.strokeStyle='#7f8a38';g.lineWidth=2;for(let i=0;i<120;i++){const a=r()*7,d=Math.sqrt(r()),x=cx+Math.cos(a)*rx*d*0.9,y=cy+Math.sin(a)*ry*d*0.9;g.beginPath();g.moveTo(x,y);g.lineTo(x-3,y-10);g.moveTo(x,y);g.lineTo(x+3,y-9);g.stroke()}}
+function camp(g,x,y,side){const c=side==='me'?'#3d6fd6':'#e0b020';g.fillStyle='#0004';g.beginPath();g.ellipse(x,y+14,26,9,0,0,7);g.fill();g.fillStyle=c;g.beginPath();g.moveTo(x-24,y+12);g.lineTo(x,y-20);g.lineTo(x+24,y+12);g.fill();g.strokeStyle='#222';g.lineWidth=2;g.stroke();g.fillStyle='#222';g.fillRect(x-1,y-34,2,16);g.fillStyle=c;g.fillRect(x+1,y-34,14,9)}
+function tower(g,x,y,side){const c=side==='me'?'#3d6fd6':'#e0b020';g.fillStyle='#0004';g.beginPath();g.ellipse(x,y+12,15,6,0,0,7);g.fill();g.fillStyle='#7b5a34';g.fillRect(x-9,y-14,18,26);g.fillStyle=c;g.beginPath();g.moveTo(x-14,y-14);g.lineTo(x,y-28);g.lineTo(x+14,y-14);g.fill();g.strokeStyle='#222';g.lineWidth=2;g.stroke()}
+function keep(g,x,y,side,big){const c=side==='me'?'#3d6fd6':'#e0b020',s=big?1.3:1;g.fillStyle='#0005';g.beginPath();g.ellipse(x,y+26*s,56*s,16*s,0,0,7);g.fill();g.fillStyle='#c9a66b';g.fillRect(x-48*s,y-14*s,96*s,40*s);g.strokeStyle='#222';g.lineWidth=2;g.strokeRect(x-48*s,y-14*s,96*s,40*s);
+ g.fillStyle=c;g.beginPath();g.moveTo(x-40*s,y-14*s);g.lineTo(x,y-40*s);g.lineTo(x+40*s,y-14*s);g.fill();g.stroke()}
+function target(g,x,y){g.strokeStyle='#d22';g.lineWidth=4;g.setLineDash([7,5]);g.beginPath();g.arc(x,y,40,0,7);g.stroke();g.setLineDash([])}
+function label(g,x,y,t){g.font='bold 26px PingFang SC';g.lineWidth=6;g.strokeStyle='#fff8';g.strokeText(t,x,y);g.fillStyle='#4a2a10';g.fillText(t,x,y)}
+function arrow(g,x,y,dx,dy){g.save();g.strokeStyle='#ffffffc0';g.fillStyle='#ffffffc0';g.lineWidth=6;g.beginPath();g.moveTo(x,y);g.lineTo(x+dx,y+dy);g.stroke();const a=Math.atan2(dy,dx);g.translate(x+dx,y+dy);g.rotate(a);g.beginPath();g.moveTo(0,0);g.lineTo(-18,-10);g.lineTo(-18,10);g.fill();g.restore()}
+
+const LV=[
+{t:"1 · 涿郡募兵（教学 · 野战）",info:{"战场":"涿县城外的农田平原，一条小河斜穿中间，有一座村庄","路":"汉军营地出来 2 条路，在村庄前汇合，过桥后又分成 3 条通向黄巾营寨","兵营":"汉 2 : 黄巾 3（黄巾占着北边小山）","目标":"拆掉黄巾大营","天气 / 电脑":"晴 / 初级","教会":"兵种克制；平原上骑兵快，过桥要排队"},
+ draw(g){grain(g,1,'#6f9a4a',500,26);
+  for(const[f,x,y,w,h,a]of[[0,330,650,220,120,0.2],[0,560,760,180,100,-0.1],[0,250,420,160,90,0.4],[0,1200,760,200,110,0.15],[0,1450,690,150,90,-0.2]])field(g,x,y,w,h,a,f);
+  hill(g,1500,250,250,160,31);trees(g,880,130,230,90,3,30);trees(g,1050,820,180,60,4,18);trees(g,120,140,110,90,5,12);
+  river(g,[[620,-40],[720,250],[820,470],[930,700],[1040,960]],46);
+  road(g,[[200,560],[420,560],[640,520],[760,470]]);road(g,[[200,560],[380,330],[600,300],[760,470]]);
+  road(g,[[760,470],[1000,450]]);road(g,[[1000,450],[1250,300],[1480,250]]);road(g,[[1000,450],[1300,470],[1530,330]]);road(g,[[1000,450],[1200,640],[1560,560],[1580,380]]);
+  bridge(g,800,465,0.35);village(g,1000,560,7);
+  keep(g,150,580,'me');camp(g,330,600,'me');camp(g,330,340,'me');tower(g,560,330,'me');tower(g,580,560,'me');
+  keep(g,1540,230,'foe',true);camp(g,1260,290,'foe');camp(g,1320,490,'foe');camp(g,1400,640,'foe');tower(g,1180,330,'foe');tower(g,1420,380,'foe');
+  label(g,90,660,'涿县');label(g,960,640,'村庄');label(g,1440,120,'黄巾大营');}},
+{t:"2 · 长社之战（守城 → 火攻反击）",info:{"战场":"长社城被围；城外是大片枯黄的长草（易燃），黄巾营寨扎在草地里","路":"城有 3 座城门，各出 1 条路，弯进草地里的敌营","兵营":"汉 2（城内）: 黄巾 5（围城半圈）","目标":"守住 3 分钟，然后出城放火，烧掉 3 座敌营（红圈）","天气 / 电脑":"夜晚；第 2 分钟起风，从城往外吹（箭头）","教会":"守城；火攻顺风在长草里蔓延"},
+ night:true,draw(g){grain(g,2,'#5f8a44',500,26);
+  tallgrass(g,1150,200,420,170,11);tallgrass(g,1250,640,440,190,12);tallgrass(g,1560,430,220,260,13);trees(g,1700,120,90,80,14,10);trees(g,1720,800,80,70,15,9);
+  road(g,[[560,330],[800,230],[1050,170],[1200,180]]);road(g,[[640,450],[950,440],[1300,430],[1480,430]]);road(g,[[560,580],[820,690],[1100,700],[1250,640]]);
+  blob(g,380,450,230,210,21,0.08);g.fillStyle='#b89d6c';g.fill();wallRing(g,380,450,230,210,[-0.6,0,0.6]);
+  keep(g,330,440,'me',true);camp(g,320,330,'me');camp(g,320,570,'me');tower(g,560,330,'me');tower(g,640,450,'me');tower(g,560,580,'me');
+  for(const[x,y]of[[1200,180],[1480,430],[1250,640]]){camp(g,x,y,'foe');target(g,x,y-4)}camp(g,1500,170,'foe');camp(g,1520,720,'foe');
+  arrow(g,700,120,200,0);arrow(g,720,800,200,0);label(g,300,320-80,'长社');label(g,1060,90,'长草（易燃）');}},
+{t:"3 · 宛城之战（攻城）",info:{"战场":"宛城建在河湾里，河从北、东两面绕着城，西边是丘陵","路":"汉军从西边 3 个方向进攻：北路过桥、中路涉水过浅滩（很慢）、南路绕丘陵到南门","兵营":"汉 4 : 黄巾 1（城外）+ 宛城（城墙、2 座城门、4 座塔）","目标":"拆掉宛城主城","天气 / 电脑":"晴 / 中级","教会":"攻城门；浅滩很慢；可用「疑兵」"},
+ draw(g){grain(g,3,'#6f9a4a',500,26);
+  hill(g,430,720,240,130,41);hill(g,240,170,170,110,42);trees(g,700,110,150,70,43,16);
+  river(g,[[900,-40],[1050,180],[1180,260],[1400,240],[1640,120],[1860,90]],56);river(g,[[1180,260],[1200,520],[1320,760],[1500,960]],56);
+  road(g,[[200,430],[500,330],[800,240],[1020,190],[1180,170],[1330,330]]);road(g,[[200,430],[600,450],[900,470],[1190,470],[1340,460]]);road(g,[[200,430],[450,560],[760,650],[1150,760],[1460,720],[1500,560]]);
+  bridge(g,1060,182,-0.6);g.fillStyle='#b9d6e8';blob(g,1195,470,60,26,51,0.2);g.fill();
+  blob(g,1540,400,210,190,52,0.08);g.fillStyle='#b89d6c';g.fill();wallRing(g,1540,400,210,190,[-2.2,3.14,1.9]);keep(g,1560,390,'foe',true);
+  for(const[x,y]of[[1400,250],[1370,480],[1690,280],[1680,540]])tower(g,x,y,'foe');camp(g,900,560,'foe');
+  keep(g,130,440,'me');camp(g,330,340,'me');camp(g,360,450,'me');camp(g,330,580,'me');camp(g,200,300,'me');tower(g,520,450,'me');
+  label(g,1500,640,'宛城');label(g,1150,560,'浅滩');}},
+{t:"4 · 广宗之战（先守后攻）",info:{"战场":"汉军在河边扎木栅营寨；黄巾大营在东边山岗上，中间隔着一片沼泽","路":"沼泽北、南各一条路绕过去；沼泽中间有一条泥泞小路（近，但很慢）","兵营":"汉 3（营寨内）: 黄巾 4","目标":"前 4 分钟守住营寨；天黑后黄巾松懈、出兵变慢，反攻拆掉黄巾大营","天气 / 电脑":"白天 → 第 4 分钟天黑 / 中级","教会":"避其锋芒，等对方懈怠再打"},
+ draw(g){grain(g,4,'#6f9a4a',500,26);
+  river(g,[[120,-40],[160,300],[110,600],[170,960]],50);hill(g,1500,430,300,240,61);marsh(g,900,450,260,170,62);trees(g,860,110,200,70,63,22);trees(g,880,810,200,60,64,20);
+  road(g,[[420,450],[600,250],[900,190],[1200,240],[1420,350]]);road(g,[[420,450],[600,660],[900,720],[1200,650],[1420,520]]);
+  curve(g,[[500,450],[900,450],[1300,440]]);g.strokeStyle='#8f7a55';g.lineWidth=20;g.setLineDash([16,10]);g.stroke();g.setLineDash([]);
+  palisade(g,[[480,180],[540,450],[480,720]]);blob(g,330,450,170,250,65,0.1);g.fillStyle='#c9b07a60';g.fill();
+  keep(g,300,450,'me');camp(g,380,300,'me');camp(g,420,450,'me');camp(g,380,600,'me');tower(g,560,250,'me');tower(g,560,650,'me');
+  keep(g,1560,420,'foe',true);camp(g,1250,250,'foe');camp(g,1250,640,'foe');camp(g,1420,300,'foe');camp(g,1420,560,'foe');tower(g,1330,440,'foe');
+  label(g,840,460,'沼泽');label(g,250,800,'汉军营寨');label(g,1480,190,'黄巾大营（山岗）');}},
+{t:"5 · 下曲阳之战（章末攻城）",info:{"战场":"下曲阳城坐落在北边群山脚下，南面是河，西边是开阔平原","路":"平原上 3 条路：北路走山脚高地（敌方 2 营占着）、中路直通西门、南路沿河过桥到南门","兵营":"汉 4（解锁投石车）: 黄巾 2 + 下曲阳（厚城墙、2 门、5 塔）","目标":"拆掉下曲阳主城","天气 / 电脑":"晴 / 中级","教会":"投石车攻城；先抢高地"},
+ draw(g){grain(g,5,'#6f9a4a',500,26);
+  hill(g,1000,110,520,150,71);hill(g,1500,80,380,120,72);trees(g,500,90,220,70,73,22);
+  river(g,[[-40,820],[500,780],[1000,820],[1400,760],[1860,800]],60);
+  road(g,[[200,450],[450,300],[800,250],[1150,260],[1380,350]]);road(g,[[200,450],[700,460],[1100,450],[1330,440]]);road(g,[[200,450],[500,640],[900,690],[1200,640],[1450,560]]);
+  bridge(g,900,690,0.05);
+  blob(g,1560,430,230,200,74,0.06);g.fillStyle='#b89d6c';g.fill();wallRing(g,1560,430,230,200,[3.14,2.1]);keep(g,1580,420,'foe',true);
+  for(const[x,y]of[[1380,300],[1360,520],[1720,260],[1740,560],[1560,640]])tower(g,x,y,'foe');camp(g,900,230,'foe');camp(g,1120,250,'foe');
+  keep(g,130,450,'me');camp(g,330,340,'me');camp(g,360,460,'me');camp(g,340,590,'me');camp(g,220,640,'me');tower(g,540,460,'me');
+  label(g,1500,710,'下曲阳');label(g,960,60,'山脚高地');}},
 ];
-const col={forest:"#3f7a3a",hill:"#c7a573",river:"#6fa6d8",bridge:"#8a6a45",wall:"#9a9a9a",palisade:"#7b5a34"};
-const el=document.getElementById('maps');
-for(const m of L){
-  let s=`<svg viewBox="0 0 ${W} ${H}">`;
-  for(const z of m.zones) s+=`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${z.k==='wall'||z.k==='palisade'?3:22}" fill="${col[z.k]}" opacity="${z.k==='hill'?0.9:1}"/>`;
-  for(const ln of m.lanes){const d=ln.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');s+=`<path d="${d}" stroke="#d8bd84" stroke-width="34" fill="none" stroke-linejoin="round" stroke-linecap="round"/>`;}
-  for(const z of m.zones) if(z.k==='bridge') s+=`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="4" fill="#8a6a45"/>`;
-  const dot=(p,c,r=15)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${r}" fill="${c}" stroke="#222" stroke-width="2"/>`;
-  const tri=(p,c)=>`<path d="M${p[0]} ${p[1]-14} L${p[0]+12} ${p[1]+9} L${p[0]-12} ${p[1]+9}Z" fill="${c}" stroke="#222" stroke-width="2"/>`;
-  for(const side of [['me','#3d6fd6'],['foe','#e0b020']]){const d=m[side[0]];
-    if(d.base) s+=`<rect x="${d.base[0]-30}" y="${d.base[1]-30}" width="60" height="60" rx="8" fill="#fff" stroke="${side[1]}" stroke-width="6"/>`;
-    for(const c of d.camps) s+=dot(c,side[1]);
-    for(const t of d.towers) s+=tri(t,side[1]);}
-  if(m.t.startsWith("2")) for(const c of [[1300,85],[1300,235],[1300,385]]) s+=`<circle cx="${c[0]}" cy="${c[1]}" r="24" fill="none" stroke="#c44" stroke-width="4" stroke-dasharray="6 5"/>`;
-  s+=`</svg>`;
-  const info=Object.entries(m.info).map(([k,v])=>`<div><b>${k}</b>：${v}</div>`).join('');
-  el.insertAdjacentHTML('beforeend',`<h2>${m.t}</h2>${s}<div class="info">${info}</div>`);
-}
+const root=document.getElementById('maps');
+for(const L of LV){const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+ g.fillStyle='#86ad5e';g.fillRect(0,0,W,H);L.draw(g);
+ if(L.night){g.fillStyle='#0a1430';g.globalAlpha=0.28;g.fillRect(0,0,W,H);g.globalAlpha=1}
+ const vg=g.createRadialGradient(W/2,H/2,H*0.5,W/2,H/2,W*0.65);vg.addColorStop(0,'#0000');vg.addColorStop(1,'#0005');g.fillStyle=vg;g.fillRect(0,0,W,H);
+ const info=Object.entries(L.info).map(([k,v])=>`<div><b>${k}</b>：${v}</div>`).join('');
+ const h=document.createElement('h2');h.textContent=L.t;root.append(h,c);root.insertAdjacentHTML('beforeend',`<div class="info">${info}</div>`);}
 </script>
