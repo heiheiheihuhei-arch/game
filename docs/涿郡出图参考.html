@@ -7,9 +7,9 @@ h2{margin:6px 0 8px}.k{display:inline-block;width:26px;height:26px;border-radius
 // 坐标用 1000×500（和地形图缩略图一致），画到 2000×1000
 const K=2;
 const ROUTES={
- 北路:{c:'#e53935',p:[[175,228],[245,200],[300,150],[338,108],[372,78],[400,70],[432,82],[468,108],[515,116],[620,120],[760,152],[848,202]],note:'必经小山包：上坡、翻过山顶（黄巾占着）、下坡，再过北桥；上坡移速 -25%'},
- 中路:{c:'#1e88e5',p:[[175,240],[262,252],[330,295],[470,306],[560,300],[650,282],[790,240],[850,218]],note:'最短；沿村庄南边；中桥窄，会挤'},
- 南路:{c:'#f9a825',p:[[172,252],[212,330],[300,382],[420,394],[505,396],[620,402],[780,376],[868,300],[866,236]],note:'穿两片树林，浅滩涉水；最慢；树林里远程易打偏'},
+ 北路:{c:'#e53935',road:[2,10],p:[[175,228],[245,200],[300,165],[338,108],[372,78],[400,70],[432,82],[468,108],[515,116],[620,120],[760,152],[848,202]],note:'必经小山包：上坡、翻过山顶（黄巾占着）、下坡，再过北桥；上坡移速 -25%'},
+ 中路:{c:'#1e88e5',road:[2,6],p:[[175,240],[262,252],[322,282],[470,306],[560,300],[650,282],[782,242],[850,218]],note:'最短；沿村庄南边；中桥窄，会挤'},
+ 南路:{c:'#f9a825',road:[1,7],p:[[172,252],[212,318],[300,382],[420,394],[505,396],[620,402],[740,388],[832,334],[866,236]],note:'穿两片树林，浅滩涉水；最慢；树林里远程易打偏'},
 };
 // 关键点位：[编号, 名称, x, y, 类型, 说明]
 const PTS=[
@@ -31,6 +31,13 @@ const PTS=[
  ['M','三路汇合',838,214,'merge','三条路在敌营前汇合'],
  ['E','黄巾大营',890,212,'ebase','右边夯土空地中央，背靠山'],
 ];
+function fordDraw(g,X,Y,ref){// 浅滩：河道在这里变宽变浅，水色发白，露出卵石；不规则的形状，顺着河道
+ let seed=13;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+ g.beginPath();const n=16;for(let i=0;i<=n;i++){const a=i/n*Math.PI*2,rx=58*(0.8+rnd()*0.4),ry=92*(0.8+rnd()*0.4),x=X+Math.cos(a)*rx,y=Y+Math.sin(a)*ry;i?g.lineTo(x,y):g.moveTo(x,y)}g.closePath();
+ g.fillStyle=ref?'#bfe0ef':'#cfe9f5';g.fill();
+ for(let i=0;i<46;i++){const a=rnd()*7,d=Math.sqrt(rnd()),x=X+Math.cos(a)*50*d,y=Y+Math.sin(a)*80*d,r=3+rnd()*6;g.beginPath();g.ellipse(x,y,r,r*0.7,rnd()*3,0,7);g.fillStyle=['#a89f8f','#8f8778','#c2b9a6'][i%3];g.fill()}
+ // 涉水的水花：几道白色短波纹
+ g.strokeStyle='#ffffffcc';g.lineWidth=3;for(let i=0;i<6;i++){const y=Y-60+i*24,x=X-30+rnd()*20;g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+15,y-6,x+30,y);g.stroke()}}
 const COL={base:'#1e5bd6',camp:'#3d6fd6',tower:'#3d6fd6',bridge:'#6d4c2f',ford:'#2aa1c9',ecamp:'#d9a400',etower:'#d9a400',merge:'#8e24aa',ebase:'#c78a00'};
 function curve(g,p){g.beginPath();g.moveTo(...p[0]);for(let i=0;i<p.length-1;i++){const p0=p[Math.max(0,i-1)],p1=p[i],p2=p[i+1],p3=p[Math.min(p.length-1,i+2)];
  g.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1])}}
@@ -52,13 +59,15 @@ function curve(g,p){g.beginPath();g.moveTo(...p[0]);for(let i=0;i<p.length-1;i++
  g.beginPath();[[480,0],[530,70],[505,140],[560,220],[545,300],[520,380],[505,440],[500,500]].forEach(([x,y],i)=>i?g.lineTo(x*K,y*K):g.moveTo(x*K,y*K));
  g.strokeStyle='#9cc7e8';g.lineWidth=46;g.lineCap='round';g.lineJoin='round';g.stroke();
  g.font='28px PingFang SC';g.fillStyle='#2f6fa3';
+ fordDraw(g,505*K,396*K,true);
  const g2=g;
- for(const[n,r]of Object.entries(ROUTES)){const p=r.p.map(([x,y])=>[x*K,y*K]);
+ for(const[n,r]of Object.entries(ROUTES)){const p=r.p.slice(r.road[0],r.road[1]+1).map(([x,y])=>[x*K,y*K]);
   curve(g,p);g.strokeStyle='#a07c48';g.lineWidth=40;g.lineCap='round';g.lineJoin='round';g.stroke();
   curve(g,p);g.strokeStyle='#dcc38c';g.lineWidth=32;g.stroke();}
+ fordDraw(g,505*K,396*K,true);
  for(const[id,name,x,y,t]of PTS){const X=x*K,Y=y*K;
   if(t==='bridge'){g.fillStyle='#6d4c2f';g.fillRect(X-36,Y-22,72,44)}
-  else if(t==='ford'){g.beginPath();g.ellipse(X,Y,46,26,0,0,7);g.fillStyle='#cfe6f2';g.fill()}
+  else if(t==='ford'){}
   else if(t==='merge'){}
   else{const r=t.includes('base')?78:t.includes('tower')?26:40;g.beginPath();g.ellipse(X,Y,r,r*0.7,0,0,7);g.fillStyle='#e8d29c';g.fill();g.strokeStyle='#b8995c';g.lineWidth=3;g.stroke()}}
  const tb=document.getElementById('t');tb.innerHTML='<tr><th>编号</th><th>点位</th><th>说明</th></tr>'+PTS.map(([id,n,x,y,t,d])=>`<tr><td><b>${id}</b></td><td>${n}</td><td>${d}</td></tr>`).join('')
