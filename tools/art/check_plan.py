@@ -1,6 +1,6 @@
 """出图前核对路线规划（手绘规划页 html）：不过就不许出图。
 检查：① 桥、浅滩的中心必须在河道中心线上；② 每条进攻路线（全程，不只画出来的路）正好过河一次，过河点就是一座桥或浅滩；
-③ 路的两头必须是兵营（敌我各一）。坐标按 1000×500。
+③ 路从我方兵营出发，并且经过一座敌方兵营。坐标按 1000×500。
 用法：python3 tools/art/check_plan.py docs/涿郡路线规划.html
 """
 import json, math, re, sys
@@ -55,9 +55,13 @@ for name, P in routes.items():
     d = math.dist(c, (best[2], best[3]))
     print(f"  过河点 ({c[0]:.0f},{c[1]:.0f}) → {best[0]} 距离 {d:.1f}")
     if d > TOL_CROSS: errs.append(f"{name} 过河点 ({c[0]:.0f},{c[1]:.0f}) 不在桥/浅滩上，最近的 {best[0]} 差 {d:.1f}")
-    for end, lab in ((P[0], "起点"), (P[-1], "终点")):
-        cb = min(camps, key=lambda p: math.dist(end, (p[2], p[3])))
-        dd = math.dist(end, (cb[2], cb[3]))
-        if dd > TOL_END: errs.append(f"{name} {lab} {end} 不在兵营上，最近的 {cb[0]} 差 {dd:.1f}")
+    # 路从我方兵营出发，并且要经过一座敌方兵营
+    mine = min((p for p in camps if p[4] == "camp"), key=lambda p: math.dist(P[0], (p[2], p[3])))
+    dd = math.dist(P[0], (mine[2], mine[3]))
+    if dd > TOL_END: errs.append(f"{name} 起点 {P[0]} 不在我方兵营上，最近的 {mine[0]} 差 {dd:.1f}")
+    R = cr(P); foe = min((p for p in camps if p[4] == "ecamp"), key=lambda p: min(math.dist(q, (p[2], p[3])) for q in R))
+    dd = min(math.dist(q, (foe[2], foe[3])) for q in R)
+    print(f"  路经过敌营 {foe[0]}，距离 {dd:.1f}")
+    if dd > TOL_END: errs.append(f"{name} 的路没经过敌方兵营，最近的 {foe[0]} 差 {dd:.1f}")
 print("\n".join(["✗ " + e for e in errs]) if errs else "✓ 规划检查通过")
 sys.exit(1 if errs else 0)
