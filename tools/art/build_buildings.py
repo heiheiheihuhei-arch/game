@@ -27,7 +27,7 @@ SIZE = bvu.SIZE
 STATES = ("", "_hurt", "_heavy")
 # 每种建筑：视频名前缀、有没有攻击；attack_end 是攻击视频截到第几帧（之后 AI 自己加了火之类的就不要）
 # still_ok：健康状态用一张静止图（AI 给静止的塔生成视频时总会让塔长高）
-BUILDINGS = {"tower": {"v": "tower", "still_ok": "art/raw/bpicks_pad/{pre}tower.png"}, "barracks": {"v": "barracks"}, "base": {"v": "base"}}
+BUILDINGS = {"tower": {"v": "tower", "still_ok": "art/raw/bpicks_fire/{pre}tower.png", "early_hurt": True}, "barracks": {"v": "barracks"}, "base": {"v": "base"}}
 
 
 def footprint(rgba):
@@ -54,12 +54,12 @@ def blend(a, b, t):
     return bytes(out)
 
 
-def seamless(video, n, L=36):
+def seamless(video, n, L=36, start=None):
     """无缝循环：取视频里紧挨着的两段 W1=[s,s+L)、W2=[s+L,s+2L)，第 i 帧 = W2 和 W1 按 i/n 交叉淡化。
     第一帧就是 W2 开头，最后一帧就是 W1 结尾，而 W1 结尾在视频里正好接着 W2 开头，所以循环时接得上"""
     N = len(bu.gray(video))
     L = min(L, N // 2 - 1)
-    s0 = (N - 2 * L) // 2
+    s0 = (N - 2 * L) // 2 if start is None else start
     w1 = bu.take(video, s0, s0 + L - 1, n)
     w2 = bu.take(video, s0 + L, s0 + 2 * L - 1, n)
     return [blend(w2[i], w1[i], i / (n - 1)) for i in range(n)]
@@ -182,7 +182,9 @@ def build(name, side):
                                  capture_output=True, check=True).stdout
             add("idle_ok", [bvu.key_flood(rgb)])
             continue
-        fr = seamless(v(f"{c['v']}{s}_idle"), 12)
+        # early_hurt：受伤视频里 AI 会越烧越多火，只取开头一秒（火点还少）做循环
+        early = s == "_hurt" and c.get("early_hurt")
+        fr = seamless(v(f"{c['v']}{s}_idle"), 12, L=12 if early else 36, start=1 if early else None)
         add(f"idle{s or '_ok'}", soft_edges(fr) if s and c.get("soft") else fr)
     if c.get("attack"):
         for s in STATES:
