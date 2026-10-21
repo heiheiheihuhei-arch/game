@@ -1,5 +1,5 @@
 """出图前核对路线规划（手绘规划页 html）：不过就不许出图。
-检查：① 桥、浅滩的中心必须在河道中心线上；② 每条路正好过河一次，过河点就是一座桥或浅滩；
+检查：① 桥、浅滩的中心必须在河道中心线上；② 每条进攻路线（全程，不只画出来的路）正好过河一次，过河点就是一座桥或浅滩；
 ③ 路的两头必须是兵营（敌我各一）。坐标按 1000×500。
 用法：python3 tools/art/check_plan.py docs/涿郡路线规划.html
 """
@@ -12,8 +12,9 @@ TOL_END = 3        # 路的端点离兵营中心的最大距离
 src = open(sys.argv[1]).read()
 river = json.loads(re.search(r"// 河[^\n]*\n\s*g\.beginPath\(\);(\[\[.*?\]\])\.forEach", src).group(1))
 routes = {}
+attack = {}
 for name, road, pts in re.findall(r"(\S+?):\{c:'[^']*',road:\[(\d+,\d+)\],p:(\[\[.*?\]\])", src):
-    a, b = map(int, road.split(",")); routes[name] = json.loads(pts)[a:b + 1]
+    a, b = map(int, road.split(",")); attack[name] = json.loads(pts); routes[name] = attack[name][a:b + 1]
 pts = [(i, n, float(x), float(y), t) for i, n, x, y, t in re.findall(r"\['(\w+)','([^']*)',([\d.]+),([\d.]+),'(\w+)'", src)]
 
 def seg_dist(p, a, b):
@@ -46,9 +47,10 @@ for i, n, x, y, t in crossings:
     if d > TOL_ON_RIVER: errs.append(f"{i}（{n}）不在河上：离河道中心 {d:.1f}，要 ≤{TOL_ON_RIVER}")
 camps = [p for p in pts if p[4] in ("camp", "ecamp")]
 for name, P in routes.items():
-    C = cr(P); xs = [k for k in range(len(C) - 1) if side(C[k]) * side(C[k + 1]) < 0]
+    C = cr(attack[name]); xs = [k for k in range(len(C) - 1) if side(C[k]) * side(C[k + 1]) < 0]
     print(f"{name}：过河 {len(xs)} 次")
-    if len(xs) != 1: errs.append(f"{name} 过河 {len(xs)} 次，要正好 1 次"); continue
+    if len(xs) != 1: errs.append(f"{name} 过河 {len(xs)} 次，要正好 1 次")
+    if len(xs) != 1: continue
     c = C[xs[0]]; best = min(crossings, key=lambda p: math.dist(c, (p[2], p[3])))
     d = math.dist(c, (best[2], best[3]))
     print(f"  过河点 ({c[0]:.0f},{c[1]:.0f}) → {best[0]} 距离 {d:.1f}")
