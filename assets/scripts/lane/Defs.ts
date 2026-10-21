@@ -139,7 +139,7 @@ export const BUILDINGS = {
     tower: {
         name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40,
         img: {
-            anim: { me: 'q/b3_tower_blue', foe: 'q/b3_tower_red', foot: 64, meBox: { roofTop: 88, canvasW: 163, canvasH: 160, footW: 50, footBottom: 14, footCx: 84 }, foeBox: { roofTop: 88, canvasW: 164, canvasH: 160, footW: 51, footBottom: 13, footCx: 79 }, idle: [[0, 1], [1, 13], [13, 25]], death: [25, 49], ruin: 49 } },
+            anim: { me: 'q/b4_tower_blue', foe: 'q/b4_tower_red', foot: 64, meBox: { roofTop: 63, canvasW: 182, canvasH: 160, footW: 60, footBottom: 26, footCx: 98 }, foeBox: { roofTop: 66, canvasW: 193, canvasH: 160, footW: 61, footBottom: 21, footCx: 92 }, idle: [[0, 1], [1, 13], [13, 25]], death: [25, 49], ruin: 49 } },
     } as BuildingDef,
     barracks: {
         name: '兵营', glyph: '营', hp: 2200, bounty: 60,
@@ -150,7 +150,7 @@ export const BUILDINGS = {
     gate: {
         name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60,
         img: {
-            anim: { me: 'q/b3_tower_blue', foe: 'q/b3_tower_red', foot: 74, meBox: { roofTop: 88, canvasW: 163, canvasH: 160, footW: 50, footBottom: 14, footCx: 84 }, foeBox: { roofTop: 88, canvasW: 164, canvasH: 160, footW: 51, footBottom: 13, footCx: 79 }, idle: [[0, 1], [1, 13], [13, 25]], death: [25, 49], ruin: 49 } },
+            anim: { me: 'q/b4_tower_blue', foe: 'q/b4_tower_red', foot: 74, meBox: { roofTop: 63, canvasW: 182, canvasH: 160, footW: 60, footBottom: 26, footCx: 98 }, foeBox: { roofTop: 66, canvasW: 193, canvasH: 160, footW: 61, footBottom: 21, footCx: 92 }, idle: [[0, 1], [1, 13], [13, 25]], death: [25, 49], ruin: 49 } },
     } as BuildingDef,
     base: {
         name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0,
