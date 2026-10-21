@@ -1,0 +1,71 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>第一章 黄巾之乱 · 地图草图</title>
+<style>
+body{margin:0;background:#faf7f0;color:#222;font:15px/1.6 -apple-system,"PingFang SC",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:24px;margin:6px 0 4px}h2{font-size:19px;margin:30px 0 6px;border-left:5px solid #b3541e;padding-left:10px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 4px;font-size:13px}.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:16px;height:12px;display:inline-block;border:1px solid #0003}
+svg{width:100%;height:auto;background:#8fb36a;border-radius:6px;display:block}
+.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:6px 18px;margin:8px 0;font-size:14px}
+.info b{color:#7a3a10}
+.note{background:#f1ead9;border-left:4px solid #c9a46a;padding:8px 12px;margin:12px 0;font-size:14px}
+</style>
+<main>
+<h1>第一章 黄巾之乱 · 五关地图草图</h1>
+<div class="note">这是<b>玩法用的示意图</b>，不是最终美术：色块表示地形，圆点是建筑。AI 画地图时会照这个构图画，路面由我们按数据叠上去。左边是汉军（蓝），右边是黄巾（黄）。</div>
+<div class="legend">
+<span><i style="background:#8fb36a"></i>平原</span><span><i style="background:#d8bd84"></i>土路</span><span><i style="background:#3f7a3a"></i>森林</span>
+<span><i style="background:#c7a573"></i>高地/山坡</span><span><i style="background:#6fa6d8"></i>河流</span><span><i style="background:#8a6a45"></i>桥</span>
+<span><i style="background:#9a9a9a"></i>城墙</span><span><i style="background:#3d6fd6;border-radius:50%"></i>汉军兵营</span><span><i style="background:#e0b020;border-radius:50%"></i>黄巾兵营</span>
+<span><i style="background:#fff;border:2px solid #333"></i>主城/大营</span><span>▲ 箭塔</span><span><i style="background:#c44;border-radius:50%"></i>目标（粮仓等）</span>
+</div>
+<div id="maps"></div>
+</main>
+<script>
+// 每关：画布 1750×470（游戏里 ×2 = 3500×940），lanes 是折线，zones 是地形块
+const W=1750,H=470;
+const L=[
+{t:"1 · 涿郡募兵（教学）",info:{"类型":"野战 · 拆主城","路":"3 条，平原","汉军":"2 营（上、下路），中路只有塔","黄巾":"3 营","天气":"晴","电脑":"初级","教会":"兵种克制；平原上骑兵很快"},
+ zones:[], lanes:[[[110,235],[300,90],[1450,90],[1640,235]],[[110,235],[1640,235]],[[110,235],[300,380],[1450,380],[1640,235]]],
+ me:{base:[110,235],camps:[[330,90],[330,380]],towers:[[420,90],[420,235],[420,380]]},
+ foe:{base:[1640,235],camps:[[1420,90],[1420,235],[1420,380]],towers:[[1330,90],[1330,235],[1330,380]]}},
+{t:"2 · 长社之战（守城→火攻反击）",info:{"类型":"守 3 分钟 → 烧掉 3 座敌营","路":"3 条汇向城门","汉军":"长社城（有城墙、1 座城门）+ 2 营在城内","黄巾":"5 营，围城，营地外是草木（易燃）","天气":"夜，第 2 分钟起风（向右吹）","电脑":"中级","教会":"守城；火攻顺风蔓延"},
+ zones:[{k:"wall",x:200,y:110,w:16,h:250},{k:"forest",x:1050,y:30,w:420,h:110},{k:"forest",x:1050,y:330,w:420,h:110},{k:"forest",x:1200,y:180,w:300,h:110}],
+ lanes:[[[110,235],[230,235],[600,110],[1300,85]],[[110,235],[230,235],[1300,235]],[[110,235],[230,235],[600,360],[1300,385]]],
+ me:{base:[110,235],camps:[[150,150],[150,320]],towers:[[230,150],[230,320]]},
+ foe:{base:null,camps:[[1300,85],[1300,235],[1300,385],[1580,150],[1580,320]],towers:[[1180,85],[1180,385]]},targets:[]},
+{t:"3 · 宛城之战（攻城）",info:{"类型":"攻城 · 拆主城","路":"3 条，中路过河（有桥）","汉军":"4 营","黄巾":"宛城：城墙 + 城门 + 4 座塔；城外 1 营","天气":"晴","电脑":"中级","教会":"攻城门；可用「疑兵」骗敌方选错兵种"},
+ zones:[{k:"river",x:760,y:0,w:70,h:470},{k:"bridge",x:745,y:215,w:100,h:40},{k:"wall",x:1420,y:70,w:16,h:330}],
+ lanes:[[[110,235],[300,95],[1420,95],[1580,235]],[[110,235],[1580,235]],[[110,235],[300,375],[1420,375],[1580,235]]],
+ me:{base:[110,235],camps:[[320,95],[320,235],[320,375],[200,150]],towers:[[420,235]]},
+ foe:{base:[1600,235],camps:[[1100,235]],towers:[[1400,110],[1400,360],[1460,180],[1460,290]]}},
+{t:"4 · 广宗之战（先守后攻）",info:{"类型":"前 4 分钟守，之后反攻 · 拆主城","路":"3 条，平原","汉军":"营寨（木栅栏）+ 3 营","黄巾":"4 营（白天出兵快）","天气":"白天 → 第 4 分钟天黑","电脑":"中级 → 天黑后「懈怠」出兵变慢","教会":"先避其锋芒，再夜袭"},
+ zones:[{k:"palisade",x:260,y:60,w:12,h:350},{k:"hill",x:1380,y:120,w:300,h:230}],
+ lanes:[[[110,235],[300,90],[1450,90],[1620,235]],[[110,235],[1620,235]],[[110,235],[300,380],[1450,380],[1620,235]]],
+ me:{base:[110,235],camps:[[220,110],[220,235],[220,360]],towers:[[300,150],[300,320]]},
+ foe:{base:[1620,235],camps:[[1300,90],[1300,235],[1300,380],[1500,235]],towers:[[1200,235]]}},
+{t:"5 · 下曲阳之战（章末攻城）",info:{"类型":"攻城 · 拆主城","路":"3 条：上路走山坡（高地）、中路直攻城门、下路过河","汉军":"4 营，解锁投石车","黄巾":"下曲阳：厚城墙 + 城门 + 5 塔；城外高地上 2 营","天气":"晴","电脑":"中级","教会":"投石车攻城；抢高地"},
+ zones:[{k:"hill",x:700,y:20,w:520,h:120},{k:"river",x:600,y:330,w:700,h:60},{k:"bridge",x:900,y:325,w:70,h:70},{k:"wall",x:1440,y:60,w:18,h:350}],
+ lanes:[[[110,235],[350,80],[1440,80],[1590,235]],[[110,235],[1590,235]],[[110,235],[350,395],[1440,395],[1590,235]]],
+ me:{base:[110,235],camps:[[360,80],[360,235],[360,395],[220,320]],towers:[[440,235]]},
+ foe:{base:[1610,235],camps:[[900,80],[1100,80]],towers:[[1420,100],[1420,370],[1470,190],[1470,280],[1300,235]]}},
+];
+const col={forest:"#3f7a3a",hill:"#c7a573",river:"#6fa6d8",bridge:"#8a6a45",wall:"#9a9a9a",palisade:"#7b5a34"};
+const el=document.getElementById('maps');
+for(const m of L){
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  for(const z of m.zones) s+=`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="${z.k==='wall'||z.k==='palisade'?3:22}" fill="${col[z.k]}" opacity="${z.k==='hill'?0.9:1}"/>`;
+  for(const ln of m.lanes){const d=ln.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');s+=`<path d="${d}" stroke="#d8bd84" stroke-width="34" fill="none" stroke-linejoin="round" stroke-linecap="round"/>`;}
+  for(const z of m.zones) if(z.k==='bridge') s+=`<rect x="${z.x}" y="${z.y}" width="${z.w}" height="${z.h}" rx="4" fill="#8a6a45"/>`;
+  const dot=(p,c,r=15)=>`<circle cx="${p[0]}" cy="${p[1]}" r="${r}" fill="${c}" stroke="#222" stroke-width="2"/>`;
+  const tri=(p,c)=>`<path d="M${p[0]} ${p[1]-14} L${p[0]+12} ${p[1]+9} L${p[0]-12} ${p[1]+9}Z" fill="${c}" stroke="#222" stroke-width="2"/>`;
+  for(const side of [['me','#3d6fd6'],['foe','#e0b020']]){const d=m[side[0]];
+    if(d.base) s+=`<rect x="${d.base[0]-30}" y="${d.base[1]-30}" width="60" height="60" rx="8" fill="#fff" stroke="${side[1]}" stroke-width="6"/>`;
+    for(const c of d.camps) s+=dot(c,side[1]);
+    for(const t of d.towers) s+=tri(t,side[1]);}
+  if(m.t.startsWith("2")) for(const c of [[1300,85],[1300,235],[1300,385]]) s+=`<circle cx="${c[0]}" cy="${c[1]}" r="24" fill="none" stroke="#c44" stroke-width="4" stroke-dasharray="6 5"/>`;
+  s+=`</svg>`;
+  const info=Object.entries(m.info).map(([k,v])=>`<div><b>${k}</b>：${v}</div>`).join('');
+  el.insertAdjacentHTML('beforeend',`<h2>${m.t}</h2>${s}<div class="info">${info}</div>`);
+}
+</script>
