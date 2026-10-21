@@ -1,8 +1,8 @@
-<!doctype html><meta charset="utf-8"><title>涿郡募兵 · 路线与点位规划</title>
+<!doctype html><meta charset="utf-8"><title>涿郡募兵 · 路线规划（空白画布）</title>
 <style>body{margin:0;background:#f4efe3;font:15px/1.6 -apple-system,"PingFang SC",sans-serif}main{max-width:1300px;margin:auto;padding:16px}
 canvas{width:100%;border-radius:6px;display:block}table{border-collapse:collapse;width:100%;margin-top:12px;font-size:14px}th,td{border:1px solid #d8ccb2;padding:5px 8px;text-align:left}th{background:#ebe0c8}
 h2{margin:6px 0 8px}.k{display:inline-block;width:26px;height:26px;border-radius:50%;color:#fff;text-align:center;font-weight:bold;line-height:26px}</style>
-<main><h2>涿郡募兵 · 路线与关键点位规划（手绘，未用 AI）</h2><canvas id="c" width="2000" height="1000"></canvas><table id="t"></table></main>
+<main><h2>涿郡募兵 · 路线与关键点位规划（空白画布手绘）</h2><canvas id="c" width="2000" height="1000"></canvas><table id="t"></table></main>
 <script>
 // 坐标用 1000×500（和地形图缩略图一致），画到 2000×1000
 const K=2;
@@ -33,8 +33,25 @@ const PTS=[
 const COL={base:'#1e5bd6',camp:'#3d6fd6',tower:'#3d6fd6',bridge:'#6d4c2f',ford:'#2aa1c9',ecamp:'#d9a400',etower:'#d9a400',merge:'#8e24aa',ebase:'#c78a00'};
 function curve(g,p){g.beginPath();g.moveTo(...p[0]);for(let i=0;i<p.length-1;i++){const p0=p[Math.max(0,i-1)],p1=p[i],p2=p[i+1],p3=p[Math.min(p.length-1,i+2)];
  g.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1])}}
-const img=new Image();img.onload=()=>{const g=document.getElementById('c').getContext('2d');g.drawImage(img,0,0,2000,1000);
- g.fillStyle='#0003';g.fillRect(0,0,2000,1000);
+(()=>{const g=document.getElementById('c').getContext('2d');
+ // 空白画布：米色纸面 + 浅网格
+ g.fillStyle='#f7f1e3';g.fillRect(0,0,2000,1000);g.strokeStyle='#e6dcc6';g.lineWidth=1;
+ for(let x=0;x<=2000;x+=100){g.beginPath();g.moveTo(x,0);g.lineTo(x,1000);g.stroke()}for(let y=0;y<=1000;y+=100){g.beginPath();g.moveTo(0,y);g.lineTo(2000,y);g.stroke()}
+ const zone=(pts,fill,stroke,dash,label)=>{g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x*K,y*K):g.moveTo(x*K,y*K));g.closePath();g.fillStyle=fill;g.fill();g.setLineDash(dash||[]);g.strokeStyle=stroke;g.lineWidth=4;g.stroke();g.setLineDash([]);
+  if(label){const lx=Math.min(...pts.map(p=>p[0]))*K+14,ly=Math.min(...pts.map(p=>p[1]))*K+38;g.font='bold 28px PingFang SC';g.fillStyle=stroke;g.fillText(label,lx,ly)}};
+ // 地形线框（只表示范围）
+ zone([[0,140],[280,140],[285,330],[0,335]],'#eadcbcaa','#a98a52',[12,8],'汉军营地');
+ zone([[800,150],[1000,140],[1000,300],[805,300]],'#eadcbcaa','#a98a52',[12,8],'黄巾营地');
+ zone([[300,30],[440,25],[460,108],[300,112]],'#d9c59a','#8a6d3b',null,'小山包（高地）');
+ zone([[330,170],[480,165],[485,282],[335,286]],'#e8d3b0','#9a6b3e',null,'村庄');
+ zone([[150,330],[470,320],[470,490],[160,490]],'#cfe0bf','#4f7a3e',null,'树林（远程易打偏）');
+ zone([[540,300],[880,295],[880,480],[540,480]],'#cfe0bf','#4f7a3e',null,'树林');
+ zone([[850,0],[1000,0],[1000,130],[880,120]],'#d9c59a','#8a6d3b',null,'山');
+ // 河：一条竖着的弯曲带子
+ g.beginPath();[[480,0],[530,70],[505,140],[560,220],[545,300],[520,380],[505,440],[500,500]].forEach(([x,y],i)=>i?g.lineTo(x*K,y*K):g.moveTo(x*K,y*K));
+ g.strokeStyle='#9cc7e8';g.lineWidth=46;g.lineCap='round';g.lineJoin='round';g.stroke();g.strokeStyle='#5a9fd1';g.lineWidth=4;g.setLineDash([16,10]);g.stroke();g.setLineDash([]);
+ g.font='28px PingFang SC';g.fillStyle='#2f6fa3';g.fillText('小河（只能走桥和浅滩过）',1110,50);
+ const g2=g;
  for(const[n,r]of Object.entries(ROUTES)){const p=r.p.map(([x,y])=>[x*K,y*K]);
   curve(g,p);g.strokeStyle='#fff';g.lineWidth=34;g.lineCap='round';g.lineJoin='round';g.stroke();
   curve(g,p);g.strokeStyle=r.c;g.lineWidth=24;g.stroke();
@@ -43,7 +60,7 @@ const img=new Image();img.onload=()=>{const g=document.getElementById('c').getCo
   for(let i=1;i<p.length;i+=2){const a=Math.atan2(p[i][1]-p[i-1][1],p[i][0]-p[i-1][0]);g.save();g.translate((p[i][0]+p[i-1][0])/2,(p[i][1]+p[i-1][1])/2);g.rotate(a);
    g.fillStyle='#fff';g.beginPath();g.moveTo(16,0);g.lineTo(-12,-13);g.lineTo(-12,13);g.fill();g.restore()}
   const q=p[2];g.font='bold 40px PingFang SC';g.lineWidth=8;g.strokeStyle='#fff';g.strokeText(n,q[0]-40,q[1]-28);g.fillStyle=r.c;g.fillText(n,q[0]-40,q[1]-28);}
- for(const[id,name,x,y,t]of PTS){const X=x*K,Y=y*K,c=COL[t];g.fillStyle='#000a';g.beginPath();
+ for(const[id,name,x,y,t]of PTS){const X=x*K,Y=y*K,c=COL[t];g.beginPath();
   if(t==='bridge'){g.save();g.translate(X,Y);g.fillStyle='#000';g.fillRect(-34,-20,68,40);g.fillStyle=c;g.fillRect(-30,-16,60,32);g.restore()}
   else if(t==='ford'){g.beginPath();g.ellipse(X,Y,44,24,0,0,7);g.fillStyle='#fff';g.fill();g.beginPath();g.ellipse(X,Y,38,19,0,0,7);g.fillStyle=c;g.fill()}
   else if(t.includes('tower')){g.beginPath();g.moveTo(X,Y-30);g.lineTo(X+26,Y+18);g.lineTo(X-26,Y+18);g.closePath();g.fillStyle='#fff';g.fill();g.beginPath();g.moveTo(X,Y-22);g.lineTo(X+19,Y+13);g.lineTo(X-19,Y+13);g.closePath();g.fillStyle=c;g.fill()}
@@ -51,6 +68,5 @@ const img=new Image();img.onload=()=>{const g=document.getElementById('c').getCo
   else{g.beginPath();g.arc(X,Y,t==='merge'?20:26,0,7);g.fillStyle='#fff';g.fill();g.beginPath();g.arc(X,Y,t==='merge'?14:20,0,7);g.fillStyle=c;g.fill()}
   g.font='bold 30px PingFang SC';g.lineWidth=7;g.strokeStyle='#000';const tx=X+30,ty=Y+(t==='bridge'||t==='ford'?52:10);g.strokeText(id,tx,ty);g.fillStyle='#fff';g.fillText(id,tx,ty);}
  const tb=document.getElementById('t');tb.innerHTML='<tr><th>编号</th><th>点位</th><th>说明</th></tr>'+PTS.map(([id,n,x,y,t,d])=>`<tr><td><b>${id}</b></td><td>${n}</td><td>${d}</td></tr>`).join('')
-  +'<tr><th colspan=3>路线</th></tr>'+Object.entries(ROUTES).map(([n,r])=>`<tr><td><span class=k style="background:${r.c}">　</span></td><td>${n}</td><td>${r.note}</td></tr>`).join('');};
-img.src='znw.jpg';
+  +'<tr><th colspan=3>路线</th></tr>'+Object.entries(ROUTES).map(([n,r])=>`<tr><td><span class=k style="background:${r.c}">　</span></td><td>${n}</td><td>${r.note}</td></tr>`).join('');})();
 </script>
