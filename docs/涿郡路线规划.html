@@ -1,0 +1,56 @@
+<!doctype html><meta charset="utf-8"><title>涿郡募兵 · 路线与点位规划</title>
+<style>body{margin:0;background:#f4efe3;font:15px/1.6 -apple-system,"PingFang SC",sans-serif}main{max-width:1300px;margin:auto;padding:16px}
+canvas{width:100%;border-radius:6px;display:block}table{border-collapse:collapse;width:100%;margin-top:12px;font-size:14px}th,td{border:1px solid #d8ccb2;padding:5px 8px;text-align:left}th{background:#ebe0c8}
+h2{margin:6px 0 8px}.k{display:inline-block;width:26px;height:26px;border-radius:50%;color:#fff;text-align:center;font-weight:bold;line-height:26px}</style>
+<main><h2>涿郡募兵 · 路线与关键点位规划（手绘，未用 AI）</h2><canvas id="c" width="2000" height="1000"></canvas><table id="t"></table></main>
+<script>
+// 坐标用 1000×500（和地形图缩略图一致），画到 2000×1000
+const K=2;
+const ROUTES={
+ 北路:{c:'#e53935',p:[[175,228],[245,200],[300,150],[362,128],[470,118],[515,116],[620,120],[760,152],[848,202]],note:'开阔平原，最长；骑兵最快；经过小山包脚下'},
+ 中路:{c:'#1e88e5',p:[[175,240],[262,252],[330,295],[470,306],[560,300],[650,282],[790,240],[850,218]],note:'最短；沿村庄南边；中桥窄，会挤'},
+ 南路:{c:'#f9a825',p:[[172,252],[212,330],[300,382],[420,394],[505,396],[620,402],[780,376],[868,300],[866,236]],note:'穿两片树林，浅滩涉水；最慢；树林里远程易打偏'},
+};
+// 关键点位：[编号, 名称, x, y, 类型, 说明]
+const PTS=[
+ ['A','汉军主城',130,235,'base','左边夯土空地中央'],
+ ['B1','汉军兵营·北',300,165,'camp','北路起点'],
+ ['B2','汉军兵营·中',322,282,'camp','中路起点'],
+ ['B3','汉军兵营·南',212,318,'camp','南路起点'],
+ ['T1','汉军箭塔·山包',370,45,'tower','小山包顶，高地：射程 +30%，覆盖北路'],
+ ['T2','汉军箭塔·村口',268,250,'tower','三路分岔口，守家'],
+ ['Q1','北桥（宽）',515,116,'bridge','北路过河；宽，可 3 人并排'],
+ ['Q2','中桥（窄）',560,300,'bridge','中路过河；窄，只能 2 人并排'],
+ ['F','浅滩',505,396,'ford','南路涉水；移速 -50%，骑兵 -60%'],
+ ['C1','黄巾兵营·北',760,152,'ecamp','北桥东岸'],
+ ['C2','黄巾兵营·中',782,242,'ecamp','中桥东岸'],
+ ['C3','黄巾兵营·南',832,334,'ecamp','南边树林出口'],
+ ['E1','黄巾箭塔·北桥',612,128,'etower','守北桥东头'],
+ ['E2','黄巾箭塔·中桥',640,296,'etower','守中桥东头'],
+ ['M','三路汇合',838,214,'merge','三条路在敌营前汇合'],
+ ['E','黄巾大营',890,212,'ebase','右边夯土空地中央，背靠山'],
+];
+const COL={base:'#1e5bd6',camp:'#3d6fd6',tower:'#3d6fd6',bridge:'#6d4c2f',ford:'#2aa1c9',ecamp:'#d9a400',etower:'#d9a400',merge:'#8e24aa',ebase:'#c78a00'};
+function curve(g,p){g.beginPath();g.moveTo(...p[0]);for(let i=0;i<p.length-1;i++){const p0=p[Math.max(0,i-1)],p1=p[i],p2=p[i+1],p3=p[Math.min(p.length-1,i+2)];
+ g.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1])}}
+const img=new Image();img.onload=()=>{const g=document.getElementById('c').getContext('2d');g.drawImage(img,0,0,2000,1000);
+ g.fillStyle='#0003';g.fillRect(0,0,2000,1000);
+ for(const[n,r]of Object.entries(ROUTES)){const p=r.p.map(([x,y])=>[x*K,y*K]);
+  curve(g,p);g.strokeStyle='#fff';g.lineWidth=34;g.lineCap='round';g.lineJoin='round';g.stroke();
+  curve(g,p);g.strokeStyle=r.c;g.lineWidth=24;g.stroke();
+  curve(g,p);g.setLineDash([30,22]);g.strokeStyle='#ffffffaa';g.lineWidth=6;g.stroke();g.setLineDash([]);
+  // 方向箭头
+  for(let i=1;i<p.length;i+=2){const a=Math.atan2(p[i][1]-p[i-1][1],p[i][0]-p[i-1][0]);g.save();g.translate((p[i][0]+p[i-1][0])/2,(p[i][1]+p[i-1][1])/2);g.rotate(a);
+   g.fillStyle='#fff';g.beginPath();g.moveTo(16,0);g.lineTo(-12,-13);g.lineTo(-12,13);g.fill();g.restore()}
+  const q=p[2];g.font='bold 40px PingFang SC';g.lineWidth=8;g.strokeStyle='#fff';g.strokeText(n,q[0]-40,q[1]-28);g.fillStyle=r.c;g.fillText(n,q[0]-40,q[1]-28);}
+ for(const[id,name,x,y,t]of PTS){const X=x*K,Y=y*K,c=COL[t];g.fillStyle='#000a';g.beginPath();
+  if(t==='bridge'){g.save();g.translate(X,Y);g.fillStyle='#000';g.fillRect(-34,-20,68,40);g.fillStyle=c;g.fillRect(-30,-16,60,32);g.restore()}
+  else if(t==='ford'){g.beginPath();g.ellipse(X,Y,44,24,0,0,7);g.fillStyle='#fff';g.fill();g.beginPath();g.ellipse(X,Y,38,19,0,0,7);g.fillStyle=c;g.fill()}
+  else if(t.includes('tower')){g.beginPath();g.moveTo(X,Y-30);g.lineTo(X+26,Y+18);g.lineTo(X-26,Y+18);g.closePath();g.fillStyle='#fff';g.fill();g.beginPath();g.moveTo(X,Y-22);g.lineTo(X+19,Y+13);g.lineTo(X-19,Y+13);g.closePath();g.fillStyle=c;g.fill()}
+  else if(t.includes('base')){g.fillStyle='#fff';g.fillRect(X-42,Y-42,84,84);g.fillStyle=c;g.fillRect(X-36,Y-36,72,72)}
+  else{g.beginPath();g.arc(X,Y,t==='merge'?20:26,0,7);g.fillStyle='#fff';g.fill();g.beginPath();g.arc(X,Y,t==='merge'?14:20,0,7);g.fillStyle=c;g.fill()}
+  g.font='bold 30px PingFang SC';g.lineWidth=7;g.strokeStyle='#000';const tx=X+30,ty=Y+(t==='bridge'||t==='ford'?52:10);g.strokeText(id,tx,ty);g.fillStyle='#fff';g.fillText(id,tx,ty);}
+ const tb=document.getElementById('t');tb.innerHTML='<tr><th>编号</th><th>点位</th><th>说明</th></tr>'+PTS.map(([id,n,x,y,t,d])=>`<tr><td><b>${id}</b></td><td>${n}</td><td>${d}</td></tr>`).join('')
+  +'<tr><th colspan=3>路线</th></tr>'+Object.entries(ROUTES).map(([n,r])=>`<tr><td><span class=k style="background:${r.c}">　</span></td><td>${n}</td><td>${r.note}</td></tr>`).join('');};
+img.src='znw.jpg';
+</script>
