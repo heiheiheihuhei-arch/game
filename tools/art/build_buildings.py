@@ -20,6 +20,9 @@ VID = ROOT / "art" / "raw" / os.environ.get("BUILDING_VIDEOS", "video_b4")
 OUT = pathlib.Path(os.environ.get("BUILDING_OUT", ROOT / "assets" / "art" / "q"))
 PREFIX = os.environ.get("BUILDING_PREFIX", "b3_")
 HEIGHT = 160
+# 烟往上飘多高：高出屋顶 SMOKE_RISE 倍建筑高度时完全散掉；SMOKE_SOLID 倍以内保持原样
+SMOKE_RISE = float(os.environ.get("SMOKE_RISE", "0.55"))
+SMOKE_SOLID = 0.08
 SIZE = bvu.SIZE
 STATES = ("", "_hurt", "_heavy")
 # 每种建筑：视频名前缀、有没有攻击；attack_end 是攻击视频截到第几帧（之后 AI 自己加了火之类的就不要）
@@ -129,13 +132,18 @@ def place(segments, out_dir, flip):
     out_dir.mkdir(parents=True, exist_ok=True)
     for p in out_dir.glob("f_*.png*"):
         p.unlink()
-    k = HEIGHT / (y1 - y0)
-    # 健康建筑的屋顶（第一帧最高的不透明处）：血条放在它上面；烟升过屋顶后慢慢变淡，到画布顶端完全消失，
-    # 不会在视频画面上沿被一刀切断。左右两边也淡出（烟飘到视频边缘同样会被切）
+    # 健康建筑的屋顶（第一帧最高的不透明处）：血条放在它上面
     raw0 = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(placed[0]), "-f", "rawvideo", "-pix_fmt", "rgba", "-"], capture_output=True, check=True).stdout
     roof = next(y for y in range(C) if any(raw0[(y * C + x) * 4 + 3] > 128 for x in range(0, C, 2)))
+    # 烟只留屋顶上面一小段：高出屋顶 SMOKE_RISE 倍建筑高的地方完全散掉，画布也只到这里（烟小、画布矮）
+    hb = base[0] + SIZE - roof
+    y0 = max(y0, int(roof - SMOKE_RISE * hb))
+    k = HEIGHT / (y1 - y0)
     roof_k = max(1, round((roof - y0) * k))
-    fade = f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*clip(Y/{roof_k},0,1)*clip(min(X,W-1-X)/(W*0.1),0,1)'"
+    # 从画布顶往下到「屋顶上面一点」之间透明度平滑地从 0 升到 1：烟飘一小段就慢慢散了；左右两边也淡出
+    fk = max(1, round((roof - SMOKE_SOLID * hb - y0) * k))
+    t = f"clip(Y/{fk},0,1)"
+    fade = f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*{t}*{t}*(3-2*{t})*clip(min(X,W-1-X)/(W*0.1),0,1)'"
     for i, p in enumerate(placed):
         vf = f"crop={x1 - x0}:{y1 - y0}:{x0}:{y0}" + (",hflip" if flip else "") + f",scale=-1:{HEIGHT},format=rgba,{fade}"
         subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(p), "-vf", vf, str(out_dir / f"f_{i}.png")], check=True)
