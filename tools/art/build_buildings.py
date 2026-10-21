@@ -62,37 +62,37 @@ def seamless(video, n, L=36):
     return [blend(w2[i], w1[i], i / (n - 1)) for i in range(n)]
 
 
-def soft_edges(frames, ramp=70, per_frame=False):
-    """AI 视频里烟的顶边、左右边有时是一刀切的直线：取这组帧里内容最上沿 / 最左右沿，往里 ramp 像素内透明度从 0 渐变到 1，
-    把直边变成自然散开。左右只处理上半部分（烟所在的高度），不碰下面的建筑本体"""
+def soft_edges(frames, ramp=140, per_frame=False):
+    """AI 视频里烟的顶边、左右边有时是一刀切的直线：从内容最上沿 / 最左右沿往里 ramp 像素，透明度按平滑曲线从 0 升到 1，
+    把直边变成自然散开。用整组统一的边缘（循环不闪）再乘上每帧自己的边缘（烟顶高低不一时也盖得住）。
+    左右只处理上半部分（烟所在的高度），不碰下面的建筑本体"""
     S = SIZE
-    tops, lefts, rights, bottoms = [], [], [], []
+    smooth = lambda t: 0.0 if t <= 0 else 1.0 if t >= 1 else t * t * (3 - 2 * t)
+    edges = []
     for f in frames:
         rows = [y for y in range(0, S, 2) if any(f[(y * S + x) * 4 + 3] > 40 for x in range(0, S, 2))]
-        tops.append(rows[0]); bottoms.append(rows[-1])
-        cols = [x for x in range(0, S, 2) if any(f[(y * S + x) * 4 + 3] > 40 for y in range(rows[0], rows[0] + (rows[-1] - rows[0]) // 2, 2))]
-        lefts.append(cols[0]); rights.append(cols[-1])
+        top, bottom = rows[0], rows[-1]
+        cols = [x for x in range(0, S, 2) if any(f[(y * S + x) * 4 + 3] > 40 for y in range(top, top + (bottom - top) // 2, 2))]
+        edges.append((top, bottom, cols[0], cols[-1]))
+    g_top, g_left, g_right = min(e[0] for e in edges), min(e[2] for e in edges), max(e[3] for e in edges)
+    g_mid = g_top + (max(e[1] for e in edges) - g_top) // 2
     out = []
-    for j, f in enumerate(frames):
-        # 倒塌时烟尘的上沿每帧都在变：按每帧自己的边缘处理；闲置循环用整组统一的边缘，循环时不会闪
-        if per_frame:
-            top, left, right, mid = tops[j], lefts[j], rights[j], tops[j] + (bottoms[j] - tops[j]) // 2
-        else:
-            top, left, right = min(tops), min(lefts), max(rights)
-            mid = top + (max(bottoms) - top) // 2
+    for f, (top, bottom, left, right) in zip(frames, edges):
+        mid = max(g_mid, top + (bottom - top) // 2)
+        sets = [(top, left, right, ramp * 0.6)] if per_frame else [(g_top, g_left, g_right, ramp), (top, left, right, ramp * 0.6)]
         b = bytearray(f)
-        for y in range(top, mid):
-            ky = min(1.0, (y - top) / ramp)
+        for y in range(min(g_top, top), mid):
             for x in range(S):
                 i = (y * S + x) * 4 + 3
                 if not b[i]:
                     continue
-                k = min(ky, (x - left) / ramp, (right - x) / ramp, 1.0)
+                k = 1.0
+                for t0, l0, r0, rp in sets:
+                    k *= smooth(min((y - t0) / rp, (x - l0) / rp, (r0 - x) / rp))
                 if k < 1:
-                    b[i] = int(b[i] * max(0.0, k))
+                    b[i] = int(b[i] * k)
         out.append(bytes(b))
     return out
-
 
 def place(segments, out_dir, flip):
     tmp = pathlib.Path(tempfile.mkdtemp())
