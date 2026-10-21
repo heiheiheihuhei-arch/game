@@ -16,14 +16,14 @@ import build_units2 as bu  # noqa: E402
 import build_video_unit as bvu  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-VID = ROOT / "art" / "raw" / "video_b"
+VID = ROOT / "art" / "raw" / "video_b2"
 OUT = pathlib.Path(os.environ.get("BUILDING_OUT", ROOT / "assets" / "art" / "q"))
 PREFIX = os.environ.get("BUILDING_PREFIX", "b3_")
 HEIGHT = 160
 SIZE = bvu.SIZE
 STATES = ("", "_hurt", "_heavy")
 # 每种建筑：视频名前缀、有没有攻击；attack_end 是攻击视频截到第几帧（之后 AI 自己加了火之类的就不要）
-BUILDINGS = {"tower": {"v": "towerA", "attack": True, "attack_end": 52}, "barracks": {"v": "barracks"}, "base": {"v": "base"}}
+BUILDINGS = {"tower": {"v": "towerA", "attack": True, "attack_end": 72}, "barracks": {"v": "barracks"}, "base": {"v": "base"}}
 
 
 def footprint(rgba):
@@ -76,8 +76,10 @@ def place(segments, out_dir, flip):
             bvu.save_raw(fr, src)
             dst = tmp / f"p{si}_{fi}.png"
             sw = round(SIZE * s)
-            vf = (f"scale={sw}:{sw},pad={max(SIZE, sw) + 2 * SIZE}:{max(SIZE, sw) + 2 * SIZE}:{SIZE + round(dx)}:{SIZE + round(dy)}:color=0x00000000,"
-                  f"crop={SIZE}:{SIZE}:{SIZE}:{SIZE}")
+            # 放大很多时（新视频里建筑画得小）偏移会是很大的负数：画布四周留足 M 的边，保证贴进去的位置不为负
+            M = sw + SIZE
+            vf = (f"scale={sw}:{sw},pad={sw + 2 * M}:{sw + 2 * M}:{M + round(dx)}:{M + round(dy)}:color=0x00000000,"
+                  f"crop={SIZE}:{SIZE}:{M}:{M}")
             subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(src), "-vf", vf, str(dst)], check=True)
             placed.append(dst)
     x0 = y0 = SIZE
