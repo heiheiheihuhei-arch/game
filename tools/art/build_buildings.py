@@ -24,7 +24,7 @@ SIZE = bvu.SIZE
 STATES = ("", "_hurt", "_heavy")
 # 每种建筑：视频名前缀、有没有攻击；attack_end 是攻击视频截到第几帧（之后 AI 自己加了火之类的就不要）
 # still_ok：健康状态用一张静止图（AI 给静止的塔生成视频时总会让塔长高）
-BUILDINGS = {"tower": {"v": "tower", "still_ok": "art/raw/bpicks_pad/{pre}tower.png"}, "barracks": {"v": "barracks"}, "base": {"v": "base"}}
+BUILDINGS = {"tower": {"v": "tower", "still_ok": "art/raw/bpicks_pad/{pre}tower.png"}, "barracks": {"v": "barracks", "soft": True}, "base": {"v": "base"}}
 
 
 def footprint(rgba):
@@ -62,8 +62,41 @@ def seamless(video, n, L=36):
     return [blend(w2[i], w1[i], i / (n - 1)) for i in range(n)]
 
 
+def soft_edges(frames, ramp=70, per_frame=False):
+    """AI 视频里烟的顶边、左右边有时是一刀切的直线：取这组帧里内容最上沿 / 最左右沿，往里 ramp 像素内透明度从 0 渐变到 1，
+    把直边变成自然散开。左右只处理上半部分（烟所在的高度），不碰下面的建筑本体"""
+    S = SIZE
+    tops, lefts, rights, bottoms = [], [], [], []
+    for f in frames:
+        rows = [y for y in range(0, S, 2) if any(f[(y * S + x) * 4 + 3] > 40 for x in range(0, S, 2))]
+        tops.append(rows[0]); bottoms.append(rows[-1])
+        cols = [x for x in range(0, S, 2) if any(f[(y * S + x) * 4 + 3] > 40 for y in range(rows[0], rows[0] + (rows[-1] - rows[0]) // 2, 2))]
+        lefts.append(cols[0]); rights.append(cols[-1])
+    out = []
+    for j, f in enumerate(frames):
+        # 倒塌时烟尘的上沿每帧都在变：按每帧自己的边缘处理；闲置循环用整组统一的边缘，循环时不会闪
+        if per_frame:
+            top, left, right, mid = tops[j], lefts[j], rights[j], tops[j] + (bottoms[j] - tops[j]) // 2
+        else:
+            top, left, right = min(tops), min(lefts), max(rights)
+            mid = top + (max(bottoms) - top) // 2
+        b = bytearray(f)
+        for y in range(top, mid):
+            ky = min(1.0, (y - top) / ramp)
+            for x in range(S):
+                i = (y * S + x) * 4 + 3
+                if not b[i]:
+                    continue
+                k = min(ky, (x - left) / ramp, (right - x) / ramp, 1.0)
+                if k < 1:
+                    b[i] = int(b[i] * max(0.0, k))
+        out.append(bytes(b))
+    return out
+
+
 def place(segments, out_dir, flip):
     tmp = pathlib.Path(tempfile.mkdtemp())
+    C = 2 * SIZE
     base = None
     placed = []
     for si, (frames, ref) in enumerate(segments):
@@ -79,19 +112,20 @@ def place(segments, out_dir, flip):
             sw = round(SIZE * s)
             # 放大很多时（新视频里建筑画得小）偏移会是很大的负数：画布四周留足 M 的边，保证贴进去的位置不为负
             M = sw + SIZE
+            # 工作画布 C×C 比视频大：基准建筑放在中下部，上面留一整屏给放大后的烟，左右各留半屏，什么都不会被裁掉
             vf = (f"scale={sw}:{sw},pad={sw + 2 * M}:{sw + 2 * M}:{M + round(dx)}:{M + round(dy)}:color=0x00000000,"
-                  f"crop={SIZE}:{SIZE}:{M}:{M}")
+                  f"crop={C}:{C}:{M - SIZE // 2}:{M - SIZE}")
             subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(src), "-vf", vf, str(dst)], check=True)
             placed.append(dst)
-    x0 = y0 = SIZE
+    x0 = y0 = C
     x1 = y1 = 0
     for p in placed:
         raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(p), "-f", "rawvideo", "-pix_fmt", "rgba", "-"], capture_output=True, check=True).stdout
-        for y in range(0, SIZE, 2):
-            xs = [x for x in range(0, SIZE, 2) if raw[(y * SIZE + x) * 4 + 3] > 40]
+        for y in range(0, C, 2):
+            xs = [x for x in range(0, C, 2) if raw[(y * C + x) * 4 + 3] > 40]
             if xs:
                 x0, x1, y0, y1 = min(x0, xs[0]), max(x1, xs[-1]), min(y0, y), max(y1, y)
-    x0, y0, x1, y1 = max(0, x0 - 4), max(0, y0 - 4), min(SIZE, x1 + 6), min(SIZE, y1 + 6)
+    x0, y0, x1, y1 = max(0, x0 - 4), max(0, y0 - 4), min(C, x1 + 6), min(C, y1 + 6)
     out_dir.mkdir(parents=True, exist_ok=True)
     for p in out_dir.glob("f_*.png*"):
         p.unlink()
@@ -99,14 +133,16 @@ def place(segments, out_dir, flip):
     # 健康建筑的屋顶（第一帧最高的不透明处）：血条放在它上面；烟升过屋顶后慢慢变淡，到画布顶端完全消失，
     # 不会在视频画面上沿被一刀切断。左右两边也淡出（烟飘到视频边缘同样会被切）
     raw0 = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(placed[0]), "-f", "rawvideo", "-pix_fmt", "rgba", "-"], capture_output=True, check=True).stdout
-    roof = next(y for y in range(SIZE) if any(raw0[(y * SIZE + x) * 4 + 3] > 128 for x in range(0, SIZE, 2)))
+    roof = next(y for y in range(C) if any(raw0[(y * C + x) * 4 + 3] > 128 for x in range(0, C, 2)))
     roof_k = max(1, round((roof - y0) * k))
     fade = f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*clip(Y/{roof_k},0,1)*clip(min(X,W-1-X)/(W*0.1),0,1)'"
     for i, p in enumerate(placed):
         vf = f"crop={x1 - x0}:{y1 - y0}:{x0}:{y0}" + (",hflip" if flip else "") + f",scale=-1:{HEIGHT},format=rgba,{fade}"
         subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(p), "-vf", vf, str(out_dir / f"f_{i}.png")], check=True)
     # 最后再加一帧干净的废墟：最后一帧里瓦砾线以上全部淡掉（烟散了）
-    foot_bottom = round((y1 - base[0]) * k)
+    # base 是在视频坐标里量的，换到工作画布坐标（左右各留半屏、上面留一屏）
+    by, bx = base[0] + SIZE, base[1] + SIZE // 2
+    foot_bottom = round((y1 - by) * k)
     h_b = HEIGHT - foot_bottom - roof_k
     line = HEIGHT - foot_bottom - round(h_b * 0.32)
     band = max(4, round(h_b * 0.12))
@@ -115,8 +151,8 @@ def place(segments, out_dir, flip):
                     f"format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*clip((Y-{line - band})/{band},0,1)'",
                     str(out_dir / f"f_{last + 1}.png")], check=True)
     # 地基在最终画布里的位置：给游戏摆放用（底边中心对准建筑坐标），地基宽度占画布宽的比例用来算显示大小
-    return {"roofTop": roof_k, "canvasW": round((x1 - x0) * k), "canvasH": HEIGHT, "footW": round(base[2] * k), "footBottom": round((y1 - base[0]) * k),
-            "footCx": round(((x1 - base[1]) if flip else (base[1] - x0)) * k)}
+    return {"roofTop": roof_k, "canvasW": round((x1 - x0) * k), "canvasH": HEIGHT, "footW": round(base[2] * k), "footBottom": round((y1 - by) * k),
+            "footCx": round(((x1 - bx) if flip else (bx - x0)) * k)}
 
 
 def build(name, side):
@@ -138,7 +174,8 @@ def build(name, side):
                                  capture_output=True, check=True).stdout
             add("idle_ok", [bvu.key_flood(rgb)])
             continue
-        add(f"idle{s or '_ok'}", seamless(v(f"{c['v']}{s}_idle"), 12))
+        fr = seamless(v(f"{c['v']}{s}_idle"), 12)
+        add(f"idle{s or '_ok'}", soft_edges(fr) if s and c.get("soft") else fr)
     if c.get("attack"):
         for s in STATES:
             vid = v(f"{c['v']}{s}_attack")
@@ -147,7 +184,8 @@ def build(name, side):
     vid = v(f"{c['v']}_die")
     # 倒塌：整段视频顺着播一遍（倒下后烟继续往上飘一会儿），最后接一帧干净废墟（place 里生成），游戏里淡过去
     n = len(bu.gray(vid))
-    add("death", bu.take(vid, 0, n - 1, 24))
+    die = bu.take(vid, 0, n - 1, 24)
+    add("death", soft_edges(die, per_frame=True) if c.get("soft") else die)
     conf["ruin"] = cur
     meta = place(segs, OUT / f"{PREFIX}{name}_{side}", flip=(side == "red"))
     print(name, side, json.dumps(conf), json.dumps(meta), flush=True)
