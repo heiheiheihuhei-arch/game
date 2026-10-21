@@ -18,7 +18,7 @@ import build_video_unit as bvu  # noqa: E402
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 VID = ROOT / "art" / "raw" / "video_b"
 OUT = ROOT / "assets" / "art" / "q"
-PREFIX = os.environ.get("BUILDING_PREFIX", "b1_")
+PREFIX = os.environ.get("BUILDING_PREFIX", "b2_")
 HEIGHT = 160
 SIZE = bvu.SIZE
 STATES = ("", "_hurt", "_heavy")
@@ -65,12 +65,27 @@ def place(segments, out_dir, flip):
     out_dir.mkdir(parents=True, exist_ok=True)
     for p in out_dir.glob("f_*.png*"):
         p.unlink()
-    for i, p in enumerate(placed):
-        vf = f"crop={x1 - x0}:{y1 - y0}:{x0}:{y0}" + (",hflip" if flip else "") + f",scale=-1:{HEIGHT}"
-        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(p), "-vf", vf, str(out_dir / f"f_{i}.png")], check=True)
-    # 地基在最终画布里的位置：给游戏摆放用（底边中心对准建筑坐标），地基宽度占画布宽的比例用来算显示大小
     k = HEIGHT / (y1 - y0)
-    return {"canvasW": round((x1 - x0) * k), "canvasH": HEIGHT, "footW": round(base[2] * k), "footBottom": round((y1 - base[0]) * k),
+    # 健康建筑的屋顶（第一帧最高的不透明处）：血条放在它上面；烟升过屋顶后慢慢变淡，到画布顶端完全消失，
+    # 不会在视频画面上沿被一刀切断。左右两边也淡出（烟飘到视频边缘同样会被切）
+    raw0 = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(placed[0]), "-f", "rawvideo", "-pix_fmt", "rgba", "-"], capture_output=True, check=True).stdout
+    roof = next(y for y in range(SIZE) if any(raw0[(y * SIZE + x) * 4 + 3] > 128 for x in range(0, SIZE, 2)))
+    roof_k = max(1, round((roof - y0) * k))
+    fade = f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*clip(Y/{roof_k},0,1)*clip(min(X,W-1-X)/(W*0.1),0,1)'"
+    for i, p in enumerate(placed):
+        vf = f"crop={x1 - x0}:{y1 - y0}:{x0}:{y0}" + (",hflip" if flip else "") + f",scale=-1:{HEIGHT},format=rgba,{fade}"
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(p), "-vf", vf, str(out_dir / f"f_{i}.png")], check=True)
+    # 最后再加一帧干净的废墟：最后一帧里瓦砾线以上全部淡掉（烟散了）
+    foot_bottom = round((y1 - base[0]) * k)
+    h_b = HEIGHT - foot_bottom - roof_k
+    line = HEIGHT - foot_bottom - round(h_b * 0.32)
+    band = max(4, round(h_b * 0.12))
+    last = len(placed) - 1
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(out_dir / f"f_{last}.png"), "-vf",
+                    f"format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*clip((Y-{line - band})/{band},0,1)'",
+                    str(out_dir / f"f_{last + 1}.png")], check=True)
+    # 地基在最终画布里的位置：给游戏摆放用（底边中心对准建筑坐标），地基宽度占画布宽的比例用来算显示大小
+    return {"roofTop": roof_k, "canvasW": round((x1 - x0) * k), "canvasH": HEIGHT, "footW": round(base[2] * k), "footBottom": round((y1 - base[0]) * k),
             "footCx": round(((x1 - base[1]) if flip else (base[1] - x0)) * k)}
 
 
@@ -96,7 +111,16 @@ def build(name, side):
             add(f"attack{s or '_ok'}", bu.take(vid, 0, min(n - 1, c["attack_end"]), 8))
     vid = v(f"{c['v']}_die")
     d1 = bu.settle(vid, bu.first_move(vid, 0, 4.0), thresh=0.8)
-    add("death", bu.take(vid, 0, d1, 12))
+    n = len(bu.gray(vid))
+    # 倒塌后面接一段还在冒烟的废墟（和倒塌同一段，同样的对齐），游戏里循环几秒再淡成干净废墟；视频剩下不够就来回播
+    tail = bu.take(vid, d1, n - 1, 8) if n - 1 - d1 >= 16 else bu.take(vid, max(0, n - 24), n - 1, 5)
+    if n - 1 - d1 < 16:
+        tail = tail + tail[-2:0:-1]
+    die = bu.take(vid, 0, d1, 12)
+    segs.append((die + tail, 0))
+    conf["death"] = [cur, cur + len(die)]
+    conf["ruinSmoke"] = [cur + len(die), cur + len(die) + len(tail)]
+    conf["ruin"] = cur + len(die) + len(tail)
     meta = place(segs, OUT / f"{PREFIX}{name}_{side}", flip=(side == "red"))
     print(name, side, json.dumps(conf), json.dumps(meta), flush=True)
 

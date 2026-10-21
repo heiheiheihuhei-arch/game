@@ -317,6 +317,9 @@ const B_IDLE_FPS = 7;
 const B_ATTACK_TIME = 0.6;
 const B_RELEASE = 0.5;
 const B_DEATH_TIME = 1.4;
+/** 倒塌后废墟再冒几秒烟，然后用多久淡成干净的废墟 */
+const B_RUIN_SMOKE_TIME = 4;
+const B_RUIN_FADE = 1.5;
 
 /** 箭塔、兵营、大本营：完好 → 受伤 → 重伤（逐帧动画里自己冒烟着火）→ 倒塌成废墟 */
 export class Building {
@@ -339,6 +342,9 @@ export class Building {
     private attackT = -1;
     private onRelease: (() => void) | null = null;
     private deathT = -1;
+    private readonly ruinNode: Node;
+    private readonly animOpacity: UIOpacity;
+    private readonly barY: number;
     /** 不属于某一路的建筑（大本营、门牙塔）在每条路上对应的位置 */
     sOn: number[] = [];
 
@@ -361,6 +367,16 @@ export class Building {
         this.anim = n.getComponent(Sprite)!;
         this.anim.trim = false;
         this.height = box.canvasH * k * 0.7;
+        // 干净的废墟垫在动画下面：倒塌冒完烟后，动画淡出就露出它
+        this.ruinNode = createSprite('Ruin', this.node, `${this.animDir}/f_${a.ruin}`, { width: box.canvasW * k, height: box.canvasH * k });
+        this.ruinNode.getComponent(UITransform)!.setAnchorPoint(box.footCx / box.canvasW, box.footBottom / box.canvasH);
+        this.ruinNode.setPosition(0, foot);
+        this.ruinNode.setSiblingIndex(n.getSiblingIndex());
+        this.ruinNode.getComponent(Sprite)!.trim = false;
+        this.ruinNode.active = false;
+        this.animOpacity = n.addComponent(UIOpacity);
+        // 血条放在屋顶上面
+        this.barY = foot + (box.canvasH - box.roofTop - box.footBottom) * k + 6;
         this.shadow.fillColor = new Color(20, 14, 10, 70);
         this.shadow.ellipse(0, foot + 4, this.radius * 1.2, this.radius * 0.42);
         this.shadow.fill();
@@ -404,8 +420,17 @@ export class Building {
         const pick = ([from, to]: [number, number], k: number) => from + Math.min(to - from - 1, Math.floor(k * (to - from)));
         if (this.deathT >= 0) {
             this.deathT += dt;
-            this.setFrame(pick(a.death, this.deathT / B_DEATH_TIME));
             this.anim.color = Color.WHITE;
+            const t = this.deathT - B_DEATH_TIME;
+            if (t < 0) { this.setFrame(pick(a.death, this.deathT / B_DEATH_TIME)); return; }
+            // 倒塌完：冒烟的废墟循环几秒，然后整张淡出，露出下面干净的废墟
+            const [from, to] = a.ruinSmoke;
+            this.setFrame(from + Math.floor(t * B_IDLE_FPS) % (to - from));
+            const f = (t - B_RUIN_SMOKE_TIME) / B_RUIN_FADE;
+            if (f > 0) {
+                this.ruinNode.active = true;
+                this.animOpacity.opacity = 255 * Math.max(0, 1 - f);
+            }
             return;
         }
         const state = this.ratio < DAMAGE_FIRE ? 2 : this.ratio < DAMAGE_SMOKE ? 1 : 0;
@@ -431,8 +456,7 @@ export class Building {
         if (!this.alive) return;
         if (this.hp !== this.shownHp) {
             this.shownHp = this.hp;
-            // 血条画在脚下：上路的塔靠近屏幕顶端，画在上面会被状态栏挡住
-            drawBar(this.bar, this.side, this.ratio, Math.max(56, this.radius * 2), -this.radius * 0.45 - 12);
+            drawBar(this.bar, this.side, this.ratio, Math.max(56, this.radius * 2), this.barY);
         }
     }
 }
