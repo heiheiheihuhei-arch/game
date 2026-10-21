@@ -39,11 +39,11 @@ const PTS=[
 ];
 function fordDraw(g,X,Y,ref){// 浅滩：河道在这里变宽变浅，水色发白，露出卵石；不规则的形状，顺着河道
  let seed=13;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
- g.beginPath();const n=16;for(let i=0;i<=n;i++){const a=i/n*Math.PI*2,rx=58*(0.8+rnd()*0.4),ry=92*(0.8+rnd()*0.4),x=X+Math.cos(a)*rx,y=Y+Math.sin(a)*ry;i?g.lineTo(x,y):g.moveTo(x,y)}g.closePath();
+ g.beginPath();const n=16;for(let i=0;i<=n;i++){const a=i/n*Math.PI*2,rx=36*(0.8+rnd()*0.4),ry=52*(0.8+rnd()*0.4),x=X+Math.cos(a)*rx,y=Y+Math.sin(a)*ry;i?g.lineTo(x,y):g.moveTo(x,y)}g.closePath();
  g.fillStyle=ref?'#bfe0ef':'#cfe9f5';g.fill();
- for(let i=0;i<46;i++){const a=rnd()*7,d=Math.sqrt(rnd()),x=X+Math.cos(a)*50*d,y=Y+Math.sin(a)*80*d,r=3+rnd()*6;g.beginPath();g.ellipse(x,y,r,r*0.7,rnd()*3,0,7);g.fillStyle=['#a89f8f','#8f8778','#c2b9a6'][i%3];g.fill()}
+ for(let i=0;i<26;i++){const a=rnd()*7,d=Math.sqrt(rnd()),x=X+Math.cos(a)*30*d,y=Y+Math.sin(a)*44*d,r=2+rnd()*4;g.beginPath();g.ellipse(x,y,r,r*0.7,rnd()*3,0,7);g.fillStyle=['#a89f8f','#8f8778','#c2b9a6'][i%3];g.fill()}
  // 涉水的水花：几道白色短波纹
- g.strokeStyle='#ffffffcc';g.lineWidth=3;for(let i=0;i<6;i++){const y=Y-60+i*24,x=X-30+rnd()*20;g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+15,y-6,x+30,y);g.stroke()}}
+ g.strokeStyle='#ffffffcc';g.lineWidth=3;for(let i=0;i<4;i++){const y=Y-30+i*20,x=X-18+rnd()*12;g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+10,y-5,x+20,y);g.stroke()}}
 const COL={base:'#1e5bd6',camp:'#3d6fd6',tower:'#3d6fd6',bridge:'#6d4c2f',ford:'#2aa1c9',ecamp:'#d9a400',etower:'#d9a400',merge:'#8e24aa',ebase:'#c78a00'};
 function curve(g,p){g.beginPath();g.moveTo(...p[0]);for(let i=0;i<p.length-1;i++){const p0=p[Math.max(0,i-1)],p1=p[i],p2=p[i+1],p3=p[Math.min(p.length-1,i+2)];
  g.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6,p1[1]+(p2[1]-p0[1])/6,p2[0]-(p3[0]-p1[0])/6,p2[1]-(p3[1]-p1[1])/6,p2[0],p2[1])}}
@@ -73,7 +73,7 @@ function curve(g,p){g.beginPath();g.moveTo(...p[0]);for(let i=0;i<p.length-1;i++
   // 路只画兵营到敌方兵营这一段
   const p=P.slice(r.road[0],r.road[1]+1);
   curve(g,p);g.strokeStyle='#fff';g.lineWidth=34;g.lineCap='round';g.lineJoin='round';g.stroke();
-  curve(g,p);g.strokeStyle=r.c;g.lineWidth=n==='坡道'?14:24;g.stroke();if(n==='南路'){g.save();g.beginPath();g.ellipse(505*K,396*K,40,70,0,0,7);g.clip();fordDraw(g,505*K,396*K,false);g.globalAlpha=0.45;curve(g,p);g.strokeStyle=r.c;g.lineWidth=24;g.stroke();g.restore()}
+  curve(g,p);g.strokeStyle=r.c;g.lineWidth=n==='坡道'?14:24;g.stroke();if(n==='南路'){g.save();g.beginPath();g.ellipse(505*K,396*K,28,42,0,0,7);g.clip();fordDraw(g,505*K,396*K,false);g.globalAlpha=0.45;curve(g,p);g.strokeStyle=r.c;g.lineWidth=24;g.stroke();g.restore()}
   curve(g,p);g.setLineDash([30,22]);g.strokeStyle='#ffffffaa';g.lineWidth=6;g.stroke();g.setLineDash([]);
   // 方向箭头
   for(let i=1;i<p.length;i+=2){const a=Math.atan2(p[i][1]-p[i-1][1],p[i][0]-p[i-1][0]);g.save();g.translate((p[i][0]+p[i-1][0])/2,(p[i][1]+p[i-1][1])/2);g.rotate(a);
