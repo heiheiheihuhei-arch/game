@@ -1,0 +1,28 @@
+{
+  "prompt": "Q版卡通游戏角色动画。这个三国枪兵小兵侧身朝右，双手握在长枪的后段、靠近枪尾，长枪大部分伸在身体前方，从头到尾始终侧身朝右、面朝右方，不转身、不回头、不改变方向，枪尖始终朝右。扎稳马步，双手紧握长枪，先把长枪放平往后收、蓄力，再双手一起用力把长枪向正前方（右方）猛地刺出，枪几乎是水平的、枪尖只比枪尾略高一点点，绝对不要往上挑、不要举高；刺出时双手往前推，长枪大部分伸到身体前方很远处；刺到最远停一下，然后把枪收回，回到和视频开头一样的握枪站姿。只刺一次，整杆长枪始终完整地留在画面里。背景从头到尾都是纯白色，没有地面、没有阴影、没有任何其他东西；镜头完全固定不动，不推拉不平移；角色始终完整地在画面中间，画面里只有这一个角色，不要出现任何特效和文字。 --resolution 480p --ratio 1:1 --duration 4 --camerafixed true --watermark false",
+  "model": "doubao-seedance-1-0-pro-fast-251015",
+  "result": {
+    "id": "cgt-20261020202305-79rhx",
+    "model": "doubao-seedance-1-0-pro-fast-251015",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-0-pro-fast/02179249898624200000000000000000000ffffac180c8bdf0814.mp4"
+    },
+    "usage": {
+      "completion_tokens": 38800,
+      "total_tokens": 38800
+    },
+    "created_at": 1792498986,
+    "updated_at": 1792499006,
+    "seed": 49985,
+    "resolution": "480p",
+    "ratio": "1:1",
+    "duration": 4,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  }
+}

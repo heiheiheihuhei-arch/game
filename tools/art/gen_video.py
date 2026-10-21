@@ -72,7 +72,10 @@ def main():
         print(f"  {int(time.time() - t0)}s {status}", flush=True)
         if status in ("succeeded", "failed", "cancelled", "expired") or "error" in st:
             break
-    (out / "task.json").write_text(json.dumps({"prompt": text, "model": args.model, "result": st}, ensure_ascii=False, indent=2))
+    # 视频地址是带签名的临时链接（含存储的 AccessKey ID），存档时去掉签名参数，免得被当成密钥泄露
+    saved = json.loads(json.dumps(st))
+    if (saved.get("content") or {}).get("video_url"): saved["content"]["video_url"] = saved["content"]["video_url"].split("?")[0]
+    (out / "task.json").write_text(json.dumps({"prompt": text, "model": args.model, "result": saved}, ensure_ascii=False, indent=2))
     if status != "succeeded":
         sys.exit(f"任务没成功：{json.dumps(st, ensure_ascii=False)[:1200]}")
     url = (st.get("content") or {}).get("video_url")

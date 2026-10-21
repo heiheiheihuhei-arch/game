@@ -25,6 +25,23 @@ node_modules/
 # 本地构建日志
 tools/last-build.log
 
-# 美术原始生成图（体积大，只把挑选、处理后的放进 assets）
-art/raw/
+# 美术原始生成图：试验批次不提交（体积大）；现行流程要用的源图、源视频要提交，换设备才能接着做
+art/raw/*
+!art/raw/refs/
+!art/raw/picks2/
+!art/raw/bpicks/
+!art/raw/bpicks_fire/
+!art/raw/bpicks_fire_tight/
+!art/raw/bpicks_pad/
+!art/raw/bpicks_pad2/
+!art/raw/bpicks_pad3/
+!art/raw/video2/
+!art/raw/video_b4/
+!art/raw/video_t/
+!art/raw/video_bg/
+!art/raw/196-battlefield/
+!art/raw/208-zhuo-plan/
+!art/raw/209-zhuo-plan2/
+!art/raw/210-zhuo-plan3/
+!art/raw/211-zhuo3-fix/
 __pycache__/

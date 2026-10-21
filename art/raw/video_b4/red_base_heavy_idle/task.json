@@ -1,0 +1,28 @@
+{
+  "prompt": "游戏建筑动画。建筑受了重伤，保持现在的残破样子不变：几处小火苗在燃烧跳动，浓浓的黑烟不断往上翻滚飘散，破旗在风里抖动。可以无缝循环。烟和火往上飘的时候始终留在画面里，不能飘出画面上边和左右两边；背景从头到尾都是纯白色，没有地面、没有阴影、没有任何其他东西；镜头完全固定不动，不推拉不平移不旋转；建筑的位置、大小、角度从头到尾完全不变，建筑始终完整地在画面里；画面里不要出现任何文字。 --resolution 480p --ratio 1:1 --duration 3 --camerafixed true --watermark false",
+  "model": "doubao-seedance-1-0-pro-fast-251015",
+  "result": {
+    "id": "cgt-20261021141101-bw4hs",
+    "model": "doubao-seedance-1-0-pro-fast-251015",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-0-pro-fast/02179256306147900000000000000000000ffffac180c8b305ed2.mp4"
+    },
+    "usage": {
+      "completion_tokens": 29200,
+      "total_tokens": 29200
+    },
+    "created_at": 1792563061,
+    "updated_at": 1792563081,
+    "seed": 174,
+    "resolution": "480p",
+    "ratio": "1:1",
+    "duration": 3,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  }
+}

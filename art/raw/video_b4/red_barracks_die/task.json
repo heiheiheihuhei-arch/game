@@ -1,0 +1,28 @@
+{
+  "prompt": "游戏建筑动画。这顶燃烧的军营帐篷被摧毁倒塌：帐篷骨架断裂，帐篷布塌下来烧成灰烬，军旗倒地，扬起一阵灰尘，最后只剩下几根焦黑的木杆、烧破的帐篷布和散落的木箱碎片，冒着几缕细细的青烟，之后保持不动。地面始终是纯白色背景，不要画草地和土地，烟只飘到画面中间的高度就散开。烟和火往上飘的时候始终留在画面里，不能飘出画面上边和左右两边；背景从头到尾都是纯白色，没有地面、没有阴影、没有任何其他东西；镜头完全固定不动，不推拉不平移不旋转；建筑的位置、大小、角度从头到尾完全不变，建筑始终完整地在画面里；画面里不要出现任何文字。 --resolution 480p --ratio 1:1 --duration 4 --camerafixed true --watermark false",
+  "model": "doubao-seedance-1-0-pro-fast-251015",
+  "result": {
+    "id": "cgt-20261021151439-kchkb",
+    "model": "doubao-seedance-1-0-pro-fast-251015",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-0-pro-fast/02179256687961400000000000000000000ffffac180c8b7f8e03.mp4"
+    },
+    "usage": {
+      "completion_tokens": 38800,
+      "total_tokens": 38800
+    },
+    "created_at": 1792566879,
+    "updated_at": 1792566896,
+    "seed": 39277,
+    "resolution": "480p",
+    "ratio": "1:1",
+    "duration": 4,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  }
+}

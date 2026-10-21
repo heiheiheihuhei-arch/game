@@ -1,0 +1,28 @@
+{
+  "prompt": "Q版卡通游戏角色动画。这个三国枪兵小兵侧身朝右，双手握在长枪的后段、靠近枪尾，长枪大部分伸在身体前方，原地站立待命：轻微的呼吸起伏，身体微微上下动，偶尔眨一下眼，手里的兵器拿稳不动。动作很小很平稳，可以无缝循环。背景从头到尾都是纯白色，没有地面、没有阴影、没有任何其他东西；镜头完全固定不动，不推拉不平移；角色始终完整地在画面中间，画面里只有这一个角色，不要出现任何特效和文字。 --resolution 480p --ratio 1:1 --duration 4 --camerafixed true --watermark false",
+  "model": "doubao-seedance-1-0-pro-fast-251015",
+  "result": {
+    "id": "cgt-20261020202214-5gbbh",
+    "model": "doubao-seedance-1-0-pro-fast-251015",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-0-pro-fast/02179249893547300000000000000000000ffffac180c8b76112e.mp4"
+    },
+    "usage": {
+      "completion_tokens": 38800,
+      "total_tokens": 38800
+    },
+    "created_at": 1792498935,
+    "updated_at": 1792498958,
+    "seed": 24742,
+    "resolution": "480p",
+    "ratio": "1:1",
+    "duration": 4,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  }
+}

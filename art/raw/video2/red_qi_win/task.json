@@ -1,0 +1,28 @@
+{
+  "prompt": "Q版卡通游戏角色动画。这个骑着白马的三国骑兵，人和马都侧身朝右，胜利：马抬起前腿高兴地嘶鸣，骑手高高举起长戟欢呼，然后马落下站稳。背景从头到尾都是纯白色，没有地面、没有阴影、没有任何其他东西；镜头完全固定不动，不推拉不平移；角色始终完整地在画面中间，画面里只有这一个角色，不要出现任何特效和文字。 --resolution 480p --ratio 1:1 --duration 4 --camerafixed true --watermark false",
+  "model": "doubao-seedance-1-0-pro-fast-251015",
+  "result": {
+    "id": "cgt-20261020185043-l4pkz",
+    "model": "doubao-seedance-1-0-pro-fast-251015",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-0-pro-fast/02179249344493600000000000000000000ffffac180c8bd52d18.mp4"
+    },
+    "usage": {
+      "completion_tokens": 38800,
+      "total_tokens": 38800
+    },
+    "created_at": 1792493444,
+    "updated_at": 1792493461,
+    "seed": 80235,
+    "resolution": "480p",
+    "ratio": "1:1",
+    "duration": 4,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  }
+}

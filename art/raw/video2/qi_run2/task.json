@@ -1,0 +1,28 @@
+{
+  "prompt": "Q版卡通游戏角色动画。这个骑着白马的三国骑兵，人和马都侧身朝右。人和马从头到尾始终保持侧身朝右，不转身、不转圈、不掉头、不改变方向。 马在原地奔跑、身体位置不动，就像在跑步机上跑：四条腿按奔跑的节奏交替前后摆动，马头和鬃毛随步伐起伏，骑手随着马上下颠动，手里稳稳握着长戟。背景从头到尾都是纯白色，没有地面、没有阴影、没有任何其他东西；镜头完全固定不动，不推拉不平移；角色始终完整地在画面中间，画面里只有这一个角色，不要出现任何特效和文字。 --resolution 480p --ratio 1:1 --duration 5 --camerafixed true --watermark false",
+  "model": "doubao-seedance-1-0-pro-fast-251015",
+  "result": {
+    "id": "cgt-20261020184049-9ms85",
+    "model": "doubao-seedance-1-0-pro-fast-251015",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-0-pro-fast/02179249285030200000000000000000000ffffac180c8b1b1263.mp4"
+    },
+    "usage": {
+      "completion_tokens": 48400,
+      "total_tokens": 48400
+    },
+    "created_at": 1792492850,
+    "updated_at": 1792492867,
+    "seed": 14215,
+    "resolution": "480p",
+    "ratio": "1:1",
+    "duration": 5,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  }
+}

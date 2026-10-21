@@ -1,0 +1,28 @@
+{
+  "prompt": "游戏建筑动画。建筑受了伤，保持现在的破损样子不变，一缕灰烟从破口处缓缓往上飘散，旗帜在风里轻轻飘动，平台上的小弓兵轻轻呼吸、警戒地望着右方。可以无缝循环。烟和火往上飘的时候始终留在画面里，不能飘出画面上边和左右两边；背景从头到尾都是纯白色，没有地面、没有阴影、没有任何其他东西；镜头完全固定不动，不推拉不平移不旋转；建筑的位置、大小、角度从头到尾完全不变，建筑始终完整地在画面里；画面里不要出现任何文字。 --resolution 480p --ratio 1:1 --duration 3 --camerafixed true --watermark false",
+  "model": "doubao-seedance-1-0-pro-fast-251015",
+  "result": {
+    "id": "cgt-20261021141249-99shj",
+    "model": "doubao-seedance-1-0-pro-fast-251015",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-0-pro-fast/02179256316995500000000000000000000ffffac180c8ba87426.mp4"
+    },
+    "usage": {
+      "completion_tokens": 29200,
+      "total_tokens": 29200
+    },
+    "created_at": 1792563169,
+    "updated_at": 1792563185,
+    "seed": 90746,
+    "resolution": "480p",
+    "ratio": "1:1",
+    "duration": 3,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  }
+}

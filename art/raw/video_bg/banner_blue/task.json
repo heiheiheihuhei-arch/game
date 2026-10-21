@@ -1,0 +1,28 @@
+{
+  "prompt": "游戏动画。军旗的旗面在风里持续飘动、起伏摆动，旗杆和底座石头不动。可以无缝循环。背景从头到尾都是纯白色，没有地面、没有阴影、没有任何其他东西；镜头完全固定不动，不推拉不平移；物体位置和大小从头到尾不变；画面中没有文字。 --resolution 480p --ratio 1:1 --duration 3 --camerafixed true --watermark false",
+  "model": "doubao-seedance-1-0-pro-fast-251015",
+  "result": {
+    "id": "cgt-20261020212943-vthxs",
+    "model": "doubao-seedance-1-0-pro-fast-251015",
+    "status": "succeeded",
+    "content": {
+      "video_url": "https://ark-content-generation-cn-beijing.tos-cn-beijing.volces.com/doubao-seedance-1-0-pro-fast/02179250298416300000000000000000000ffffac180c8bc74f1d.mp4"
+    },
+    "usage": {
+      "completion_tokens": 29200,
+      "total_tokens": 29200
+    },
+    "created_at": 1792502984,
+    "updated_at": 1792503008,
+    "seed": 29725,
+    "resolution": "480p",
+    "ratio": "1:1",
+    "duration": 3,
+    "framespersecond": 24,
+    "service_tier": "default",
+    "execution_expires_after": 172800,
+    "draft": false,
+    "priority": 0,
+    "output_format": "mp4"
+  }
+}
