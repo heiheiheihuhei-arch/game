@@ -17,8 +17,8 @@ import build_video_unit as bvu  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 VID = ROOT / "art" / "raw" / "video_b"
-OUT = ROOT / "assets" / "art" / "q"
-PREFIX = os.environ.get("BUILDING_PREFIX", "b2_")
+OUT = pathlib.Path(os.environ.get("BUILDING_OUT", ROOT / "assets" / "art" / "q"))
+PREFIX = os.environ.get("BUILDING_PREFIX", "b3_")
 HEIGHT = 160
 SIZE = bvu.SIZE
 STATES = ("", "_hurt", "_heavy")
@@ -32,6 +32,33 @@ def footprint(rgba):
     top, bottom = rows[0], rows[-1]
     band = [x for y in range(bottom - max(4, (bottom - top) * 45 // 100), bottom + 1, 2) for x in range(0, SIZE, 2) if rgba[(y * SIZE + x) * 4 + 3] > 128]
     return bottom, (min(band) + max(band)) / 2, max(band) - min(band)
+
+
+def blend(a, b, t):
+    """两帧 RGBA 按透明度正确地混合：t=0 全是 a，t=1 全是 b"""
+    out = bytearray(len(a))
+    u = 1 - t
+    for i in range(0, len(a), 4):
+        wa, wb = a[i + 3] * u, b[i + 3] * t
+        w = wa + wb
+        if w < 0.5:
+            continue
+        out[i] = int((a[i] * wa + b[i] * wb) / w)
+        out[i + 1] = int((a[i + 1] * wa + b[i + 1] * wb) / w)
+        out[i + 2] = int((a[i + 2] * wa + b[i + 2] * wb) / w)
+        out[i + 3] = int(w)
+    return bytes(out)
+
+
+def seamless(video, n, L=36):
+    """无缝循环：取视频里紧挨着的两段 W1=[s,s+L)、W2=[s+L,s+2L)，第 i 帧 = W2 和 W1 按 i/n 交叉淡化。
+    第一帧就是 W2 开头，最后一帧就是 W1 结尾，而 W1 结尾在视频里正好接着 W2 开头，所以循环时接得上"""
+    N = len(bu.gray(video))
+    L = min(L, N // 2 - 1)
+    s0 = (N - 2 * L) // 2
+    w1 = bu.take(video, s0, s0 + L - 1, n)
+    w2 = bu.take(video, s0 + L, s0 + 2 * L - 1, n)
+    return [blend(w2[i], w1[i], i / (n - 1)) for i in range(n)]
 
 
 def place(segments, out_dir, flip):
@@ -102,25 +129,17 @@ def build(name, side):
         cur += len(fr)
 
     for s in STATES:
-        st, L, _ = bu.find_loop(v(f"{c['v']}{s}_idle"), 24, 70)
-        add(f"idle{s or '_ok'}", bu.take(v(f"{c['v']}{s}_idle"), st, st + L - 1, 8))
+        add(f"idle{s or '_ok'}", seamless(v(f"{c['v']}{s}_idle"), 12))
     if c.get("attack"):
         for s in STATES:
             vid = v(f"{c['v']}{s}_attack")
             n = len(bu.gray(vid))
             add(f"attack{s or '_ok'}", bu.take(vid, 0, min(n - 1, c["attack_end"]), 8))
     vid = v(f"{c['v']}_die")
-    d1 = bu.settle(vid, bu.first_move(vid, 0, 4.0), thresh=0.8)
+    # 倒塌：整段视频顺着播一遍（倒下后烟继续往上飘一会儿），最后接一帧干净废墟（place 里生成），游戏里淡过去
     n = len(bu.gray(vid))
-    # 倒塌后面接一段还在冒烟的废墟（和倒塌同一段，同样的对齐），游戏里循环几秒再淡成干净废墟；视频剩下不够就来回播
-    tail = bu.take(vid, d1, n - 1, 8) if n - 1 - d1 >= 16 else bu.take(vid, max(0, n - 24), n - 1, 5)
-    if n - 1 - d1 < 16:
-        tail = tail + tail[-2:0:-1]
-    die = bu.take(vid, 0, d1, 12)
-    segs.append((die + tail, 0))
-    conf["death"] = [cur, cur + len(die)]
-    conf["ruinSmoke"] = [cur + len(die), cur + len(die) + len(tail)]
-    conf["ruin"] = cur + len(die) + len(tail)
+    add("death", bu.take(vid, 0, n - 1, 24))
+    conf["ruin"] = cur
     meta = place(segs, OUT / f"{PREFIX}{name}_{side}", flip=(side == "red"))
     print(name, side, json.dumps(conf), json.dumps(meta), flush=True)
 
