@@ -116,7 +116,7 @@ export interface BuildingArt {
     anim: BuildingAnim;
 }
 
-/** 建筑逐帧动画（tools/art/build_buildings.py 生成）：三种血量各一段闲置循环、会射箭的三种血量各一段攻击、一段倒塌（停在最后一帧的废墟） */
+/** 建筑逐帧动画（tools/art/build_buildings.py 生成）：三种血量各一段闲置循环（健康的箭塔只有一帧静止图）、一段倒塌，最后一帧是干净废墟 */
 export interface BuildingAnim {
     me: string;
     foe: string;
@@ -126,10 +126,8 @@ export interface BuildingAnim {
     meBox: AnimBox;
     foeBox: AnimBox;
     idle: [number, number][];
-    attack?: [number, number][];
     death: [number, number];
-    /** 倒塌后还在冒烟的废墟（循环几秒），然后淡成 ruin 这一帧干净的废墟 */
-    ruinSmoke: [number, number];
+    /** 倒塌播完后淡成的这一帧干净废墟 */
     ruin: number;
 }
 export interface AnimBox { roofTop: number; canvasW: number; canvasH: number; footW: number; footBottom: number; footCx: number }
@@ -141,23 +139,23 @@ export const BUILDINGS = {
     tower: {
         name: '箭塔', glyph: '塔', hp: 2000, attack: { dmg: 32, cd: 1.0, range: 260 }, bounty: 40,
         img: {
-            anim: { me: 'q/b2_tower_blue', foe: 'q/b2_tower_red', foot: 64, meBox: { roofTop: 19, canvasW: 160, canvasH: 160, footW: 102, footBottom: 12, footCx: 82 }, foeBox: { roofTop: 14, canvasW: 160, canvasH: 160, footW: 112, footBottom: 4, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], attack: [[24, 32], [32, 40], [40, 48]], death: [48, 60], ruinSmoke: [60, 68], ruin: 68 } },
+            anim: { me: 'q/b3_tower_blue', foe: 'q/b3_tower_red', foot: 64, meBox: { roofTop: 88, canvasW: 163, canvasH: 160, footW: 50, footBottom: 14, footCx: 84 }, foeBox: { roofTop: 88, canvasW: 164, canvasH: 160, footW: 51, footBottom: 13, footCx: 79 }, idle: [[0, 1], [1, 13], [13, 25]], death: [25, 49], ruin: 49 } },
     } as BuildingDef,
     barracks: {
         name: '兵营', glyph: '营', hp: 2200, bounty: 60,
         img: {
-            anim: { me: 'q/b2_barracks_blue', foe: 'q/b2_barracks_red', foot: 112, meBox: { roofTop: 59, canvasW: 167, canvasH: 160, footW: 132, footBottom: 20, footCx: 85 }, foeBox: { roofTop: 64, canvasW: 166, canvasH: 160, footW: 132, footBottom: 15, footCx: 82 }, idle: [[0, 8], [8, 16], [16, 24]], death: [24, 36], ruinSmoke: [36, 44], ruin: 44 } },
+            anim: { me: 'q/b3_barracks_blue', foe: 'q/b3_barracks_red', foot: 112, meBox: { roofTop: 115, canvasW: 184, canvasH: 160, footW: 71, footBottom: 1, footCx: 95 }, foeBox: { roofTop: 111, canvasW: 169, canvasH: 160, footW: 66, footBottom: 9, footCx: 83 }, idle: [[0, 12], [12, 24], [24, 36]], death: [36, 60], ruin: 60 } },
     } as BuildingDef,
     /** 大本营门前的两座门牙塔：比路上的塔更硬、打得更疼 */
     gate: {
         name: '门牙塔', glyph: '塔', hp: 3000, attack: { dmg: 48, cd: 1.0, range: 270 }, bounty: 60,
         img: {
-            anim: { me: 'q/b2_tower_blue', foe: 'q/b2_tower_red', foot: 74, meBox: { roofTop: 19, canvasW: 160, canvasH: 160, footW: 102, footBottom: 12, footCx: 82 }, foeBox: { roofTop: 14, canvasW: 160, canvasH: 160, footW: 112, footBottom: 4, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], attack: [[24, 32], [32, 40], [40, 48]], death: [48, 60], ruinSmoke: [60, 68], ruin: 68 } },
+            anim: { me: 'q/b3_tower_blue', foe: 'q/b3_tower_red', foot: 74, meBox: { roofTop: 88, canvasW: 163, canvasH: 160, footW: 50, footBottom: 14, footCx: 84 }, foeBox: { roofTop: 88, canvasW: 164, canvasH: 160, footW: 51, footBottom: 13, footCx: 79 }, idle: [[0, 1], [1, 13], [13, 25]], death: [25, 49], ruin: 49 } },
     } as BuildingDef,
     base: {
         name: '大本营', glyph: '城', hp: 7000, attack: { dmg: 60, cd: 1.0, range: 300 }, bounty: 0,
         img: {
-            anim: { me: 'q/b2_base_blue', foe: 'q/b2_base_red', foot: 200, meBox: { roofTop: 42, canvasW: 167, canvasH: 160, footW: 135, footBottom: 10, footCx: 85 }, foeBox: { roofTop: 41, canvasW: 160, canvasH: 160, footW: 129, footBottom: 17, footCx: 78 }, idle: [[0, 8], [8, 16], [16, 24]], death: [24, 36], ruinSmoke: [36, 44], ruin: 44 } },
+            anim: { me: 'q/b3_base_blue', foe: 'q/b3_base_red', foot: 200, meBox: { roofTop: 54, canvasW: 167, canvasH: 160, footW: 109, footBottom: 19, footCx: 93 }, foeBox: { roofTop: 55, canvasW: 168, canvasH: 160, footW: 109, footBottom: 19, footCx: 75 }, idle: [[0, 12], [12, 24], [24, 36]], death: [36, 60], ruin: 60 } },
     } as BuildingDef,
 };
 

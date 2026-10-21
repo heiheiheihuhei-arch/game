@@ -54,6 +54,8 @@ export class Battle {
     spawnT = 4;
     /** 胜方：1 我方，-1 敌方，0 平局；null 表示还在打 */
     winner: Side | 0 | null = null;
+    /** 分出胜负后过了多久：大本营倒塌播完再弹结算 */
+    winnerT = 0;
     private projs: Proj[] = [];
     private floats: Float[] = [];
     /** 正在播阵亡动画的兵：已经不算在战场上，播完再删 */
@@ -169,6 +171,9 @@ export class Battle {
                 u.sync(dt, false);
             }
             this.corpses = this.corpses.filter(c => c.updateDeath(dt) || (c.node.destroy(), false));
+            // 建筑继续播：被拆的大本营要播完倒塌
+            for (const b of this.buildings) b.sync(dt);
+            this.winnerT += dt;
             this.fx.update(dt);
             this.updateFloats(dt);
             return;
@@ -359,9 +364,8 @@ export class Battle {
         }
         if (!best) return;
         b.cdT = atk.cd;
-        const t = best;
-        // 有射箭动画的塔：拉弓到一半才放箭，箭从塔上的弓兵那里飞出去
-        b.fire(() => { if (t.alive) this.shoot(b.side, b.x, b.y + b.height * 0.75, t, atk.dmg, false); });
+        // 箭从塔顶射出去
+        this.shoot(b.side, b.x, b.y + b.height * 0.75, best, atk.dmg, false);
     }
 
     private updateProjs(dt: number) {

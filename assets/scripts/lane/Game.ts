@@ -6,6 +6,7 @@ import { CameraCtl, Minimap } from './Camera';
 import { GUARD, MATCH_TIME, REINFORCE_SIZE, TECHS, UNIT_ORDER, UNITS } from './Defs';
 import { BASE_X, drawMap, LANE_NAMES } from './MapDef';
 import { Scenery } from './Scenery';
+import { BUILDING_FALL_TIME } from './Entities';
 import { Particles } from './Particles';
 import { Hud, PanelModel } from './Ui';
 
@@ -159,7 +160,9 @@ export class Game {
         const me = this.battle.base(1), foe = this.battle.base(-1);
         this.hud.setTop(this.battle.sides[1].gold, this.battle.income, Math.max(0, MATCH_TIME - this.battle.time), me.hp / me.maxHp, foe.hp / foe.maxHp);
         this.hud.update(realDt);
-        if (this.battle.winner !== null && !this.resultShown) {
+        // 大本营被拆的：等倒塌动画播完再弹结算；时间到判定的立刻弹
+        const fell = !this.battle.base(1).alive || !this.battle.base(-1).alive;
+        if (this.battle.winner !== null && !this.resultShown && (!fell || this.battle.winnerT >= BUILDING_FALL_TIME + 0.3)) {
             this.resultShown = true;
             const w = this.battle.winner, t = this.battle.time, mm = Math.floor(t / 60), ss = Math.floor(t % 60);
             const timeout = this.battle.base(1).alive && this.battle.base(-1).alive;

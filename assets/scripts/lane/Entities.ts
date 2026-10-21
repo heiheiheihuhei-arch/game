@@ -312,14 +312,12 @@ export class Unit {
 
 export type BuildingKind = 'tower' | 'gate' | 'barracks' | 'base';
 
-/** 建筑动画：闲置每秒几帧；射箭这一段多长、第几成放箭；倒塌多长 */
+/** 建筑动画：闲置每秒几帧；倒塌（顺播一遍，烟一直往上飘）多长；播完用多久淡成干净的废墟 */
 const B_IDLE_FPS = 7;
-const B_ATTACK_TIME = 0.6;
-const B_RELEASE = 0.5;
-const B_DEATH_TIME = 1.4;
-/** 倒塌后废墟再冒几秒烟，然后用多久淡成干净的废墟 */
-const B_RUIN_SMOKE_TIME = 4;
-const B_RUIN_FADE = 1.5;
+const B_DEATH_TIME = 2.6;
+const B_RUIN_FADE = 1.2;
+/** 倒塌从开始到变成干净废墟的总时长：大本营倒下后等这么久再弹结算 */
+export const BUILDING_FALL_TIME = B_DEATH_TIME + B_RUIN_FADE;
 
 /** 箭塔、兵营、大本营：完好 → 受伤 → 重伤（逐帧动画里自己冒烟着火）→ 倒塌成废墟 */
 export class Building {
@@ -339,8 +337,6 @@ export class Building {
     private readonly animDir: string;
     private shownFrame = '';
     private animT = Math.random() * 5;
-    private attackT = -1;
-    private onRelease: (() => void) | null = null;
     private deathT = -1;
     private readonly ruinNode: Node;
     private readonly animOpacity: UIOpacity;
@@ -399,13 +395,6 @@ export class Building {
         }
     }
 
-    /** 射箭：有动画的塔先拉弓，拉到一半放箭；没有动画的立刻放 */
-    fire(release: () => void) {
-        if (!this.def.img.anim.attack) { release(); return; }
-        this.attackT = 0;
-        this.onRelease = release;
-    }
-
     private setFrame(i: number) {
         const path = `${this.animDir}/f_${i}`;
         if (path === this.shownFrame) return;
@@ -423,30 +412,16 @@ export class Building {
             this.anim.color = Color.WHITE;
             const t = this.deathT - B_DEATH_TIME;
             if (t < 0) { this.setFrame(pick(a.death, this.deathT / B_DEATH_TIME)); return; }
-            // 倒塌完：冒烟的废墟循环几秒，然后整张淡出，露出下面干净的废墟
-            const [from, to] = a.ruinSmoke;
-            this.setFrame(from + Math.floor(t * B_IDLE_FPS) % (to - from));
-            const f = (t - B_RUIN_SMOKE_TIME) / B_RUIN_FADE;
-            if (f > 0) {
-                this.ruinNode.active = true;
-                this.animOpacity.opacity = 255 * Math.max(0, 1 - f);
-            }
+            // 倒塌播完：停在最后一帧，整张淡出，露出下面干净的废墟（烟散了）
+            this.setFrame(a.death[1] - 1);
+            this.ruinNode.active = true;
+            this.animOpacity.opacity = 255 * Math.max(0, 1 - t / B_RUIN_FADE);
             return;
         }
         const state = this.ratio < DAMAGE_FIRE ? 2 : this.ratio < DAMAGE_SMOKE ? 1 : 0;
         this.animT += dt;
-        let f: number;
-        if (this.attackT >= 0 && a.attack) {
-            this.attackT += dt;
-            const k = this.attackT / B_ATTACK_TIME;
-            if (k >= B_RELEASE && this.onRelease) { const r = this.onRelease; this.onRelease = null; r(); }
-            f = pick(a.attack[state], Math.min(0.999, k));
-            if (k >= 1) this.attackT = -1;
-        } else {
-            const [from, to] = a.idle[state];
-            f = from + Math.floor(this.animT * B_IDLE_FPS) % (to - from);
-        }
-        this.setFrame(f);
+        const [from, to] = a.idle[state];
+        this.setFrame(from + Math.floor(this.animT * B_IDLE_FPS) % (to - from));
         this.anim.color = this.flash > 0 ? HURT_TINT : Color.WHITE;
     }
 
