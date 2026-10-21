@@ -16,7 +16,7 @@ import build_units2 as bu  # noqa: E402
 import build_video_unit as bvu  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-VID = ROOT / "art" / "raw" / "video_b2"
+VID = ROOT / "art" / "raw" / os.environ.get("BUILDING_VIDEOS", "video_b4")
 OUT = pathlib.Path(os.environ.get("BUILDING_OUT", ROOT / "assets" / "art" / "q"))
 PREFIX = os.environ.get("BUILDING_PREFIX", "b3_")
 HEIGHT = 160
@@ -24,7 +24,7 @@ SIZE = bvu.SIZE
 STATES = ("", "_hurt", "_heavy")
 # 每种建筑：视频名前缀、有没有攻击；attack_end 是攻击视频截到第几帧（之后 AI 自己加了火之类的就不要）
 # still_ok：健康状态用一张静止图（AI 给静止的塔生成视频时总会让塔长高）
-BUILDINGS = {"tower": {"v": "tower", "still_ok": "art/raw/bpicks_pad/{pre}tower.png"}, "barracks": {"v": "barracks", "soft": True}, "base": {"v": "base"}}
+BUILDINGS = {"tower": {"v": "tower", "still_ok": "art/raw/bpicks_pad/{pre}tower.png"}, "barracks": {"v": "barracks"}, "base": {"v": "base"}}
 
 
 def footprint(rgba):
