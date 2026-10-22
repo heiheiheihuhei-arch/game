@@ -1,5 +1,5 @@
-import { Node } from 'cc';
-import { createSprite } from '../core/Res';
+import { EffectAsset, Material, Node, Sprite, Texture2D } from 'cc';
+import { createSprite, loadArt } from '../core/Res';
 import { LAYOUT as ZHUO3 } from './maps/Zhuo3';
 
 /**
@@ -15,6 +15,8 @@ export interface MapLayout {
     image?: string;
     /** 摆不摆老地图那套手放的树、石头、营地、战场痕迹（AI 画的关卡图自带，不摆） */
     decor?: boolean;
+    /** 流水图（tools/art/water_mask.py 生成）：给了就让图上的河水流动 */
+    flow?: string;
     lanes: [number, number][][];
     buildings: { id?: string; kind: 'base' | 'gate' | 'barracks' | 'tower'; side: 1 | -1; lane: number; pos: [number, number] }[];
 }
@@ -102,7 +104,7 @@ export function classicLayout(): MapLayout {
 // ---------- 当前关卡 ----------
 
 /** 现在打的是哪张图：涿郡（AI 画的 3:1 第 3 张）；要回到老的对称地图换成 classicLayout() */
-export const LAYOUT: MapLayout = { ...ZHUO3, image: 'q/maps/zhuo3', decor: false };
+export const LAYOUT: MapLayout = { ...ZHUO3, image: 'q/maps/zhuo3', flow: 'q/maps/zhuo3_flow', decor: false };
 export const WORLD_W = LAYOUT.worldW;
 export const WORLD_H = LAYOUT.worldH;
 /** 兵在路上左右散开的最大偏移：路窄的图上兵排得紧一些 */
@@ -139,6 +141,17 @@ export function projectS(lane: number, x: number, y: number): number {
 
 export function drawMap(parent: Node) {
     // 底图是一整张图：老地图由 tools/art/mapgen.html 合成，关卡图是 AI 画的，改了要重新跑 fit_map.py
-    createSprite('Ground', parent, LAYOUT.image ?? 'q/map', { width: WORLD_W, height: WORLD_H });
+    const ground = createSprite('Ground', parent, LAYOUT.image ?? 'q/map', { width: WORLD_W, height: WORLD_H });
+    if (LAYOUT.flow) applyWater(ground, LAYOUT.flow);
     // 树、石头、营地、战场痕迹和会动的东西在 Scenery.ts
+}
+
+/** 河水流动：底图换成 map-water 着色器，按流水图只让水动；资源没载到就保持静态图 */
+async function applyWater(ground: Node, flow: string) {
+    const [effect, tex] = await Promise.all([loadArt('effects/map-water', EffectAsset), loadArt(`${flow}/texture`, Texture2D)]);
+    if (!effect || !tex || !ground.isValid) return;
+    const mat = new Material();
+    mat.initialize({ effectAsset: effect });
+    mat.setProperty('flowTex', tex);
+    ground.getComponent(Sprite)!.customMaterial = mat;
 }

@@ -1,0 +1,91 @@
+// 关卡底图用的精灵着色器：和内置 sprite 一样画图，只是让「流水图」标出来的河水顺着流向流动、闪光。
+// 流水图（tools/art/water_mask.py 生成）：R = 水的多少，G、B = 流向（图片像素方向，0.5 为 0）。
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: sprite-vs:vert
+      frag: water-fs:frag
+      depthStencilState:
+        depthTest: false
+        depthWrite: false
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      rasterizerState:
+        cullMode: none
+      properties:
+        flowTex: { value: black }
+        # x：一次流动拉多远（底图像素）；y：流速（每秒走几个周期）；z、w：底图一个像素在 uv 里多大
+        waterParams: { value: [5.0, 0.35, 0.000289, 0.000868] }
+        # x：闪光强度；y：波纹疏密
+        waterLook: { value: [0.22, 90.0, 0.0, 0.0] }
+}%
+
+CCProgram sprite-vs %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  in vec3 a_position;
+  in vec2 a_texCoord;
+  in vec4 a_color;
+  out vec4 color;
+  out vec2 uv0;
+  vec4 vert () {
+    vec4 pos = vec4(a_position, 1);
+    pos = cc_matViewProj * pos;
+    uv0 = a_texCoord;
+    color = a_color;
+    return pos;
+  }
+}%
+
+CCProgram water-fs %{
+  precision highp float;
+  #include <builtin/uniforms/cc-global>
+  #include <builtin/internal/embedded-alpha>
+
+  in vec4 color;
+  in vec2 uv0;
+  #pragma builtin(local)
+  layout(set = 2, binding = 12) uniform sampler2D cc_spriteTexture;
+  uniform sampler2D flowTex;
+  uniform Water {
+    vec4 waterParams;
+    vec4 waterLook;
+  };
+
+  float hash (vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float noise (vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+  }
+
+  vec4 frag () {
+    vec4 base = CCSampleWithAlphaSeparated(cc_spriteTexture, uv0);
+    vec4 fl = texture(flowTex, uv0);
+    float w = fl.r;
+    if (w > 0.01) {
+      vec2 dir = fl.gb * 2.0 - 1.0;
+      vec2 px = waterParams.zw;
+      float t = cc_time.x * waterParams.y;
+      // 两相流动：两张错开半个周期、顺流拉开的图交替淡入淡出，看不出重新开始的那一下
+      float p0 = fract(t), p1 = fract(t + 0.5);
+      vec2 o0 = dir * px * waterParams.x * (p0 - 0.5) * 2.0;
+      vec2 o1 = dir * px * waterParams.x * (p1 - 0.5) * 2.0;
+      vec4 c0 = CCSampleWithAlphaSeparated(cc_spriteTexture, uv0 - o0);
+      vec4 c1 = CCSampleWithAlphaSeparated(cc_spriteTexture, uv0 - o1);
+      float k = abs(p0 - 0.5) * 2.0;
+      vec4 flowed = mix(c0, c1, k);
+      // 顺流漂的细碎亮光
+      vec2 q = uv0 / px / waterLook.y;
+      float n = noise(q * vec2(6.0, 6.0) - dir * cc_time.x * 1.6) * noise(q * vec2(11.0, 11.0) - dir * cc_time.x * 2.3 + 7.0);
+      float glint = smoothstep(0.42, 0.62, n) * waterLook.x;
+      flowed.rgb += vec3(glint);
+      base = mix(base, flowed, w);
+    }
+    return base * color;
+  }
+}%

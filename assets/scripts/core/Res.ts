@@ -1,4 +1,4 @@
-import { AssetManager, assetManager, Node, Sprite, SpriteFrame, UITransform } from 'cc';
+import { Asset, AssetManager, assetManager, Node, Sprite, SpriteFrame, UITransform } from 'cc';
 import { createNode } from './Nodes';
 
 // 美术资源放在独立的 art 包里：在小游戏平台上它是分包，不占 4MB 首包
@@ -18,6 +18,17 @@ function loadArtBundle(): Promise<AssetManager.Bundle | null> {
         });
     }
     return artBundle;
+}
+
+/** 按路径加载 art 包里的其他资源（着色器、贴图）；失败返回 null */
+export function loadArt<T extends Asset>(path: string, type: new (...args: any[]) => T): Promise<T | null> {
+    return loadArtBundle().then(bundle => new Promise<T | null>(resolve => {
+        if (!bundle) { resolve(null); return; }
+        bundle.load(path, type, (err, asset) => {
+            if (err) { console.warn(`[Res] 资源加载失败 ${path}`, err); resolve(null); return; }
+            resolve(asset as T);
+        });
+    }));
 }
 
 /** 已经载好的图片，没载好返回 null：逐帧动画切帧时用，不能等异步 */
