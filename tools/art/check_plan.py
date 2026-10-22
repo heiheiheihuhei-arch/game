@@ -1,6 +1,6 @@
 """出图前核对路线规划（手绘规划页 html）：不过就不许出图。
 检查：① 桥、浅滩的中心必须在河道中心线上；② 每条进攻路线（全程，不只画出来的路）正好过河一次，过河点就是一座桥或浅滩；
-③ 路从我方兵营出发，并且经过一座敌方兵营。坐标按 1000×500。
+③ 路从我方兵营出发，并且经过一座敌方兵营；④ 山下的兵营、箭塔、主城，空地边缘离山脚要留出一段平地。坐标按 1000×500。
 用法：python3 tools/art/check_plan.py docs/涿郡路线规划.html
 """
 import json, math, re, sys
@@ -8,6 +8,9 @@ import json, math, re, sys
 TOL_ON_RIVER = 3   # 桥/浅滩中心离河道中心线的最大距离
 TOL_CROSS = 6      # 路过河点离桥/浅滩中心的最大距离
 TOL_END = 3        # 路的端点离兵营中心的最大距离
+HILL_GAP = 40      # 山下建筑空地边缘到山脚的最小距离
+# 空地半径（和出图参考页 plan_ref 里画的空地一样大：像素 78/26/40，÷2 换成坐标）
+FOOT = {"base": 39, "ebase": 39, "tower": 13, "etower": 13, "camp": 20, "ecamp": 20}
 
 src = open(sys.argv[1]).read()
 river = json.loads(re.search(r"// 河[^\n]*\n\s*g\.beginPath\(\);(\[\[.*?\]\])\.forEach", src).group(1))
@@ -63,5 +66,20 @@ for name, P in routes.items():
     dd = min(math.dist(q, (foe[2], foe[3])) for q in R)
     print(f"  路经过敌营 {foe[0]}，距离 {dd:.1f}")
     if dd > TOL_END: errs.append(f"{name} 的路没经过敌方兵营，最近的 {foe[0]} 差 {dd:.1f}")
+# ④ 山脚留平地：不在山上的建筑，空地边缘到山包轮廓的距离
+hill = re.search(r"zone\((\[\[.*?\]\]),[^\n]*'小山包", src)
+if hill:
+    H_ = json.loads(hill.group(1))
+    def inside(p):
+        c = False
+        for i in range(len(H_)):
+            (x0, y0), (x1, y1) = H_[i], H_[(i + 1) % len(H_)]
+            if (y0 > p[1]) != (y1 > p[1]) and p[0] < x0 + (x1 - x0) * (p[1] - y0) / (y1 - y0): c = not c
+        return c
+    for i, n, x, y, t in pts:
+        if t not in FOOT or inside((x, y)): continue
+        gap = min(seg_dist((x, y), H_[k], H_[(k + 1) % len(H_)]) for k in range(len(H_))) - FOOT[t]
+        if gap < 120: print(f"{i} {n}：空地边缘离山脚 {gap:.0f}")
+        if gap < HILL_GAP: errs.append(f"{i}（{n}）离山脚太近：空地边缘只差 {gap:.0f}，要 ≥{HILL_GAP}")
 print("\n".join(["✗ " + e for e in errs]) if errs else "✓ 规划检查通过")
 sys.exit(1 if errs else 0)
