@@ -5,6 +5,7 @@ import { preloadSprites } from './core/Res';
 import { animFrames, BUILDINGS, buildingFrames, UNITS } from './lane/Defs';
 import { Game } from './lane/Game';
 import { sceneryAssets } from './lane/Scenery';
+import { LAYOUT } from './lane/MapDef';
 
 const { ccclass } = _decorator;
 
@@ -24,7 +25,7 @@ export class Bootstrap extends Component {
         AudioMgr.init(this.node);
         // 兵是出兵时才创建的：动画帧和残破图全部载好再开局，不然网慢时兵出来是隐身的
         const loading = createLabel('Loading', this.node, '加载中…', 36, new Color(250, 236, 200, 255));
-        preloadSprites(['q/map',
+        preloadSprites([LAYOUT.image ?? 'q/map',
             ...Object.values(UNITS).flatMap(d => [d.anim, d.animFoe].flatMap(a => a ? animFrames(a) : [])),
             ...Object.values(BUILDINGS).flatMap(d => d.img.anim ? buildingFrames(d.img.anim) : []),
             ...sceneryAssets()])

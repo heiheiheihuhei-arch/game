@@ -5,7 +5,7 @@ import {
     TECH_STEP, TECHS, TechKey, UNITS, UnitKind,
 } from './Defs';
 import { Building, Side, Unit } from './Entities';
-import { BARRACKS_S, BASE_X, GATE_TOWERS, LANE_LEN, LANE_NAMES, LANE_TOWER, LANES, lanePoint, projectS } from './MapDef';
+import { LANE_LEN, LANE_NAMES, LANES, LAT_SPREAD, LAYOUT, lanePoint, projectS } from './MapDef';
 import { Particles } from './Particles';
 
 export class SideState {
@@ -44,7 +44,7 @@ const C = {
 };
 
 /** 被挡住时最多往路的一侧挪多远（路宽 150，兵出生时左右散开 ±50） */
-const SIDESTEP_MAX = 62;
+const SIDESTEP_MAX = LAT_SPREAD + 12;
 
 export class Battle {
     readonly sides: Record<number, SideState> = { 1: new SideState(), [-1]: new SideState() };
@@ -66,25 +66,13 @@ export class Battle {
 
     constructor(private readonly actors: Node, overlay: Node, private readonly fx: Particles, private readonly texts: Node) {
         this.projG = createGraphics('Projectiles', overlay);
-        for (const side of [1, -1] as Side[]) {
-            const bx = side === 1 ? -BASE_X : BASE_X;
-            // 大本营和门牙塔不属于哪一路：记下它们在每条路上对应的位置，三路的兵打到家门口都会碰上
-            const shared = (kind: 'base' | 'gate', x: number, y: number) => {
-                const b = new Building(actors, kind, BUILDINGS[kind], side, -1, 0, x, y);
-                b.sOn = LANES.map((_, lane) => projectS(lane, x, y));
-                this.buildings.push(b);
-            };
-            shared('base', bx, 0);
-            for (const [dx, dy] of GATE_TOWERS) shared('gate', bx + side * dx, dy);
-            LANES.forEach((_, lane) => {
-                const bs = side === 1 ? BARRACKS_S : LANE_LEN[lane] - BARRACKS_S;
-                const put = (kind: 'tower' | 'barracks', s: number, lat: number) => {
-                    const [x, y] = lanePoint(lane, s, lat);
-                    this.buildings.push(new Building(actors, kind, BUILDINGS[kind], side, lane, s, x, y));
-                };
-                put('barracks', bs, 0);
-                put('tower', bs + side * LANE_TOWER[lane].ahead, LANE_TOWER[lane].lat);
-            });
+        // 建筑位置都写在地图数据里：大本营、门牙塔不属于哪一路，记下它们在每条路上对应的位置，三路的兵打到家门口都会碰上
+        for (const d of LAYOUT.buildings) {
+            const [x, y] = d.pos, side = d.side as Side;
+            const s = d.lane === -1 ? 0 : projectS(d.lane, x, y);
+            const b = new Building(actors, d.kind, BUILDINGS[d.kind], side, d.lane, s, x, y);
+            if (d.lane === -1) b.sOn = LANES.map((_, lane) => projectS(lane, x, y));
+            this.buildings.push(b);
         }
     }
 
@@ -220,7 +208,7 @@ export class Battle {
         for (let i = 0; i < n; i++) {
             // 从兵营门口排成一列走出去
             const s = b.s + side * (b.radius + 8) - side * i * 30;
-            const u = new Unit(this.actors, def, side, lane, s, (Math.random() - 0.5) * 100, dmgMul, hpMul);
+            const u = new Unit(this.actors, def, side, lane, s, (Math.random() - 0.5) * 2 * LAT_SPREAD, dmgMul, hpMul);
             [u.x, u.y] = lanePoint(lane, s, u.lat);
             this.units.push(u);
         }

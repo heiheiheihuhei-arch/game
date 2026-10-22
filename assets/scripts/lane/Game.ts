@@ -4,7 +4,7 @@ import { Ai } from './Ai';
 import { Battle } from './Battle';
 import { CameraCtl, Minimap } from './Camera';
 import { GUARD, MATCH_TIME, REINFORCE_SIZE, TECHS, UNIT_ORDER, UNITS } from './Defs';
-import { BASE_X, drawMap, LANE_NAMES } from './MapDef';
+import { drawMap, LANE_NAMES, MY_BASE } from './MapDef';
 import { Scenery } from './Scenery';
 import { BUILDING_FALL_TIME } from './Entities';
 import { Particles } from './Particles';
@@ -44,7 +44,7 @@ export class Game {
         this.battle = new Battle(this.actors, overlay, this.fx, texts);
         this.ai = new Ai(this.battle);
         this.cam = new CameraCtl(world);
-        this.cam.focus(-BASE_X + 500, 0);
+        this.cam.focus(MY_BASE[0] + 500, MY_BASE[1]);
 
         const ui = createNode('UI', this.root);
         const vs = view.getVisibleSize();

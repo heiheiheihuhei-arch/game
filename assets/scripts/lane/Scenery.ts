@@ -1,7 +1,7 @@
 import { Color, Graphics, Node, Sprite, UIOpacity } from 'cc';
 import { createGraphics, createNode } from '../core/Nodes';
 import { createSprite, readySprite } from '../core/Res';
-import { WORLD_H, WORLD_W } from './MapDef';
+import { LAYOUT, WORLD_H, WORLD_W } from './MapDef';
 
 /**
  * 战场布景：地上的战斗痕迹、和兵一起按前后排序的摆件（树、石头、拒马、营地）、会动的东西（篝火、军旗、飞过的乌鸦、飘过的云影）。
@@ -149,7 +149,8 @@ export class Scenery {
 
     /** ground：地面层（地图图上面、兵下面）；actors：和兵一起排序的层；sky：所有东西上面 */
     constructor(ground: Node, actors: Node, sky: Node) {
-        for (const side of [1, -1]) {
+        // 痕迹、摆件、营地是给老地图手放的；AI 画的关卡图自带这些，只留乌鸦和云影
+        for (const side of LAYOUT.decor ? [1, -1] : []) {
             for (const [img, x, y, w] of SCARS) {
                 const n = createSprite('Scar', ground, `bg/${img}`, { width: w });
                 // 敌方半边不是严格镜像：错开一点、上下翻一下，避免中间看出对称
