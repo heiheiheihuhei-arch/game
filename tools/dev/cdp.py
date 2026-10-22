@@ -15,7 +15,11 @@ import time
 import urllib.request
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-PORT = 9333
+def _free_port():
+    # 每次换一个空闲端口：连着跑两次时，上一个 Chrome 还没完全退出，占着固定端口会让第二次连不上
+    with socket.socket() as so:
+        so.bind(("127.0.0.1", 0)); return so.getsockname()[1]
+PORT = _free_port()
 
 
 class WS:
@@ -81,6 +85,8 @@ def main():
                 break
             except Exception:
                 time.sleep(0.2)
+        else:
+            sys.exit("Chrome 没有启动起来（等了 30 秒）")
         ws = WS(page["webSocketDebuggerUrl"])
         seq = [0]
 

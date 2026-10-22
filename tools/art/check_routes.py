@@ -1,10 +1,12 @@
 """核对 AI 画的地图上的路和规划路线是否一致：沿规划路线每隔几像素，在法线方向 ±R 像素内找路面（按颜色），
 记录偏差；输出每条路线的覆盖率、平均/最大偏差，并画一张检查图（规划线 + 识别出的路面）。
-用法：python3 tools/art/check_routes.py 地图.png 路线.json 检查图.jpg [过河点.json]  （路线 json：{名字: [[x,y],...]}，过河点 json：{编号: [x,y]}，坐标按 1000×500）
+用法：python3 tools/art/check_routes.py 地图.png 路线.json 检查图.jpg [过河点.json]  （路线 json：{名字: [[x,y],...]}，过河点 json：{编号: [x,y]}，坐标高 500、宽按地图比例，2:1 是 1000×500，3:1 是 1500×500）
 """
 import json, math, subprocess, sys
 src, rj, out = sys.argv[1], sys.argv[2], sys.argv[3]
-W, H, R = 1000, 500, 14
+# 坐标系：高固定 500，宽按地图比例（2:1 → 1000，3:1 → 1500）
+_wh = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", src], capture_output=True, text=True, check=True).stdout.strip().split(",")
+H, R = 500, 14; W = round(H * int(_wh[0]) / int(_wh[1]))
 raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", src, "-vf", f"scale={W}:{H}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], capture_output=True, check=True).stdout
 def road(x, y):
     i = (y * W + x) * 3; r, g, b = raw[i], raw[i + 1], raw[i + 2]
